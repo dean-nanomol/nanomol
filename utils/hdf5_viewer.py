@@ -55,24 +55,20 @@ class hdf5_viewer(QtWidgets.QWidget):
                 attributes[attr_name] = attr_value
             return attributes
     
-    # def update_plot(self, a, b):
-    #     print(a)
-    #     print(b)
-    #     sender = self.sender()
-    #     print('updated')
-    #     print(sender.model())
-    #     print(sender.currentIndex())
-    #     #print(sender.model().item(sender.currentIndex()) )
-    #     if sender == self.datafile_treeview_Y.selectionModel:
-    #         print('type match')
-    
     def update_plot(self):
+        """ check selected datasets and update plot """
+        # get selected treeview items, selectedIndexes() returns QModelIndex objects
         selected_indices = self.datafile_treeview_Y.selectionModel().selectedIndexes()
         for index in selected_indices:
-            
-            item = self.datafile_treeview_Y.model().itemFromIndex(index)
-            print(item.text())
-            print(item.parent())
+            # convert QModelIndex objects into hdf5 datafile paths
+            tree_item = self.datafile_treeview_Y.model().itemFromIndex(index)
+            item_label = tree_item.text()
+            datafile_item = [item_label]
+            parent_item = tree_item.parent()
+            while parent_item is not None:
+                datafile_item.insert(0, parent_item.text() )
+                parent_item = parent_item.parent()
+            print(datafile_item)
         
         
 if __name__ == '__main__' :
