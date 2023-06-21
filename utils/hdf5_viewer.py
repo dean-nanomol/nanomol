@@ -68,8 +68,11 @@ class hdf5_viewer(QtWidgets.QWidget):
     
     def update_plot(self):
         selected_indices = self.datafile_treeview_Y.selectionModel().selectedIndexes()
-        for index in selection:
-            print(self.datafile_treeview_Y.model().itemFromIndex(index).text() )
+        for index in selected_indices:
+            
+            item = self.datafile_treeview_Y.model().itemFromIndex(index)
+            print(item.text())
+            print(item.parent())
         
         
 if __name__ == '__main__' :
