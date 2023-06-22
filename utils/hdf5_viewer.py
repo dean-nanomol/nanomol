@@ -5,6 +5,7 @@ Created on Thu Jun 15 10:39:21 2023
 @author: deankos
 """
 
+import numpy as np
 import h5py
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
@@ -57,18 +58,31 @@ class hdf5_viewer(QtWidgets.QWidget):
     
     def update_plot(self):
         """ check selected datasets and update plot """
-        # get selected treeview items, selectedIndexes() returns QModelIndex objects
+        self.data_Y_toPlot = []
+        # get selected treeview items; selectedIndexes() returns QModelIndex objects
         selected_indices = self.datafile_treeview_Y.selectionModel().selectedIndexes()
         for index in selected_indices:
             # convert QModelIndex objects into hdf5 datafile paths
             tree_item = self.datafile_treeview_Y.model().itemFromIndex(index)
             item_label = tree_item.text()
-            datafile_item = [item_label]
+            datafile_directory = [item_label]
             parent_item = tree_item.parent()
             while parent_item is not None:
-                datafile_item.insert(0, parent_item.text() )
+                # itereate through parent items to get full path from root
+                datafile_directory.insert(0, parent_item.text() )
                 parent_item = parent_item.parent()
-            print(datafile_item)
+            
+            datafile_item = self.datafile[datafile_directory.pop(0)]
+            # get actual datafile item (group or dataset) corresponding to selected item
+            for datafile_key in datafile_directory:
+                datafile_item = datafile_item[datafile_key]
+            if isinstance(datafile_item, h5py.Dataset):
+                # only append to data for plotting if datafile item is a dataset
+                self.data_Y_toPlot.append(np.array(datafile_item) )
+            
+        print(self.data_Y_toPlot)
+                
+         
         
         
 if __name__ == '__main__' :
