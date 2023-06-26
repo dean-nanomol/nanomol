@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>643</width>
-    <height>521</height>
+    <width>704</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -209,6 +209,9 @@
            </property>
            <item>
             <widget class="QTreeView" name="datafile_treeview_X">
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectItems</enum>
+             </property>
              <attribute name="headerVisible">
               <bool>false</bool>
              </attribute>
