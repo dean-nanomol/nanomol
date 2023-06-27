@@ -23,11 +23,15 @@ class hdf5_viewer(QtWidgets.QWidget):
         self.datafile_treeview_X.selectionModel().selectionChanged.connect(self.update_data_toPlot_X)
         self.data_Y_toPlot = []
         self.data_X_toPlot = []
+        self.data_plot_labels = []
         
     def initialise_plot(self):
         self.data_plot = pg.PlotWidget()
         self.plot_grid.replaceWidget(self.plot_widget, self.data_plot)
         self.data_plot.setBackground('w')
+        self.plot_format = {'symbol':'o',
+                            'symbolSize':3}
+        self.data_plot.addLegend()
         
     def load_datafile_tree(self):
         """ build QTreeView from hdf5 dataset. The name of each dataset or group is a QStandardItem """
@@ -60,12 +64,14 @@ class hdf5_viewer(QtWidgets.QWidget):
     def update_data_toPlot_Y(self):
         """ update data for plotting from treeView selection """
         self.data_Y_toPlot = []
+        self.data_plot_labels = []
         # get selected treeview items for Y axis of plot
         selected_indices = self.datafile_treeview_Y.selectionModel().selectedIndexes()
         for index in selected_indices:
             # convert QModelIndex objects into hdf5 datafile paths
             tree_item = self.datafile_treeview_Y.model().itemFromIndex(index)
             item_label = tree_item.text()
+            data_label = item_label
             datafile_directory = [item_label]
             parent_item = tree_item.parent()
             while parent_item is not None:
@@ -80,45 +86,53 @@ class hdf5_viewer(QtWidgets.QWidget):
             if isinstance(datafile_item, h5py.Dataset):
                 # only append to data for plotting if datafile item is a dataset
                 self.data_Y_toPlot.append(np.array(datafile_item) )
+                self.data_plot_labels.append(data_label)
         self.update_plot()
         
     def update_data_toPlot_X(self):
         self.data_X_toPlot = []
         # get selected treeview item for X axis
         # selection limited to 1 item from treeview selectionMode property in .ui file
-        selected_index = self.datafile_treeview_X.selectionModel().selectedIndexes()[0]
-        tree_item = self.datafile_treeview_X.model().itemFromIndex(selected_index)
-        item_label = tree_item.text()
-        datafile_directory = [item_label]
-        parent_item = tree_item.parent()
-        while parent_item is not None:
-            datafile_directory.insert(0, parent_item.text() )
-            parent_item = parent_item.parent()
-        datafile_item = self.datafile[datafile_directory.pop(0)]
-        for datafile_key in datafile_directory:
-            datafile_item = datafile_item[datafile_key]
-        if isinstance(datafile_item, h5py.Dataset):
-            # only append to data for plotting if datafile item is a dataset
-            self.data_X_toPlot.append(np.array(datafile_item) )
-        self.update_plot()
-        
+        selected_index = self.datafile_treeview_X.selectionModel().selectedIndexes()
+        if len(selected_index)>0:   # check if an item is selected
+            selected_index = selected_index[0]
+            tree_item = self.datafile_treeview_X.model().itemFromIndex(selected_index)
+            item_label = tree_item.text()
+            datafile_directory = [item_label]
+            parent_item = tree_item.parent()
+            while parent_item is not None:
+                datafile_directory.insert(0, parent_item.text() )
+                parent_item = parent_item.parent()
+            datafile_item = self.datafile[datafile_directory.pop(0)]
+            for datafile_key in datafile_directory:
+                datafile_item = datafile_item[datafile_key]
+            if isinstance(datafile_item, h5py.Dataset):
+                # only append to data for plotting if datafile item is a dataset
+                self.data_X_toPlot.append(np.array(datafile_item) )
+            self.update_plot()
+                    
     def update_plot(self):
         """ plot currently selected data """
         self.data_plot.clear()
-        if self.data_X_Y_are_plot_compatible():
-            for data_Y in self.data_Y_toPlot:
+        N_lines = len(self.data_Y_toPlot)
+        for (data_Y, label, color_index) in zip(self.data_Y_toPlot, self.data_plot_labels, range(N_lines)):
+            # set line and marker colours
+            color = pg.intColor(color_index, hues=N_lines)
+            pen = pg.mkPen(color=color, width=1)
+            self.plot_format.update({'symbolPen': pen,
+                                     'symbolBrush': pg.mkBrush(color=color) })
+            if self.data_X_Y_are_plot_compatible():
                 try:    
-                    self.data_plot.plot(self.data_X_toPlot[0], data_Y)
+                    self.data_plot.plot(self.data_X_toPlot[0], data_Y, name=label, pen=pen, **self.plot_format)
                 except Exception as exception:
                     print('Exception: {}'.format(exception) )
-        else:
-            for data_Y in self.data_Y_toPlot:
+            else:
                 try:
-                    self.data_plot.plot(range(len(data_Y)), data_Y)
+                    self.data_plot.plot(range(len(data_Y)), data_Y, name=label, pen=pen, **self.plot_format)
+                    self.data_plot.setLabel('bottom', 'index')
                 except Exception as exception:
                     print('Exception: {}'.format(exception) )
-                
-                
+                         
     def data_X_Y_are_plot_compatible(self):
         """ check if current X and Y data exist and are size compatible for plotting """
         if len(self.data_Y_toPlot)>0 and len(self.data_X_toPlot)>0:
