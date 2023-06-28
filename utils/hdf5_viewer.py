@@ -34,7 +34,7 @@ class hdf5_viewer(QtWidgets.QWidget):
         self.data_plot.addLegend()
         
     def load_datafile_tree(self):
-        """ build QTreeView from hdf5 dataset. The name of each dataset or group is a QStandardItem """
+        """ make QTreeView from hdf5 dataset. The name of each dataset or group is a QStandardItem """
         self.datafile_tree_model = QStandardItemModel()
         self.datafile_treeview_X.setModel(self.datafile_tree_model)
         self.treeview_root = self.datafile_tree_model.invisibleRootItem()  # get root item
@@ -48,18 +48,19 @@ class hdf5_viewer(QtWidgets.QWidget):
             if isinstance(datafile_group[key], h5py.Group):
                 """ recursively build a tree branch for each datafile group """
                 self.load_datafile_branch(datafile_group[key], tree_item.child(row_counter))
-                
-    def get_attributes(self, datafile_item):
-        """
-        Returns python dictionary of attributes
-        
-        datafile_item: h5py group or dataset        
-        """
-        if isinstance(datafile_item, (h5py.Group, h5py.Dataset) ):
-            attributes = {}
-            for attr_name, attr_value in datafile_item.attrs.items():
-                attributes[attr_name] = attr_value
-            return attributes
+    
+    def load_attributes(self, datafile_item):
+        """ display hdf5 attributes of datafile_item in QTableView widget """
+        self.attrs_table_model = QStandardItemModel()
+        self.attrs_tableview.setModel(self.attrs_table_model)
+        self.attrs_tableview_root = self.attrs_table_model.invisibleRootItem()
+        for attr_name, attr_value in datafile_item.attrs.items():
+            # convert attribute value into str, otherwise display type only
+            try:
+                attr_value = str(attr_value)
+            except:
+                attr_value = str(type(attr_value))
+            self.attrs_tableview_root.appendRow([QStandardItem(attr_name), QStandardItem(attr_value)] )
     
     def update_data_toPlot_Y(self):
         """ update data for plotting from treeView selection """
@@ -67,9 +68,9 @@ class hdf5_viewer(QtWidgets.QWidget):
         self.data_plot_labels = []
         # get selected treeview items for Y axis of plot
         selected_indices = self.datafile_treeview_Y.selectionModel().selectedIndexes()
-        for index in selected_indices:
+        for i, item_index in enumerate(selected_indices):
             # convert QModelIndex objects into hdf5 datafile paths
-            tree_item = self.datafile_treeview_Y.model().itemFromIndex(index)
+            tree_item = self.datafile_treeview_Y.model().itemFromIndex(item_index)
             item_label = tree_item.text()
             data_label = item_label
             datafile_directory = [item_label]
@@ -87,6 +88,10 @@ class hdf5_viewer(QtWidgets.QWidget):
                 # only append to data for plotting if datafile item is a dataset
                 self.data_Y_toPlot.append(np.array(datafile_item) )
                 self.data_plot_labels.append(data_label)
+            if i==(len(selected_indices)-1):
+                # show dataset/group attributes for last selected item
+                self.item_for_attrs_view = datafile_item
+                self.load_attributes(self.item_for_attrs_view)
         self.update_plot()
         
     def update_data_toPlot_X(self):
@@ -109,6 +114,8 @@ class hdf5_viewer(QtWidgets.QWidget):
             if isinstance(datafile_item, h5py.Dataset):
                 # only append to data for plotting if datafile item is a dataset
                 self.data_X_toPlot.append(np.array(datafile_item) )
+            self.item_for_attrs_view = datafile_item
+            self.load_attributes(self.item_for_attrs_view)
             self.update_plot()
                     
     def update_plot(self):
@@ -124,6 +131,7 @@ class hdf5_viewer(QtWidgets.QWidget):
             if self.data_X_Y_are_plot_compatible():
                 try:    
                     self.data_plot.plot(self.data_X_toPlot[0], data_Y, name=label, pen=pen, **self.plot_format)
+                    self.data_plot.setLabel('bottom', '')
                 except Exception as exception:
                     print('Exception: {}'.format(exception) )
             else:
