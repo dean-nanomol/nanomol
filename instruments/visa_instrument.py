@@ -11,7 +11,7 @@ class visa_instrument():
     """
     Instrument using the VISA communication protocol.
     
-    address: str , instrument address obtained e.g. from pyvisa ResourceManager or NI MAX
+    address: str; instrument address obtained e.g. from pyvisa ResourceManager or NI MAX
     """
     
     def __init__(self, address):
