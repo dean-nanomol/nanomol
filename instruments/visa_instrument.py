@@ -14,7 +14,8 @@ class visa_instrument():
     address: str; instrument address obtained e.g. from pyvisa ResourceManager or NI MAX
     """
     
-    def __init__(self, address):
+    def __init__(self, address, remove_termination = True):
+        self.remove_termination = remove_termination
         resource_manager = pyvisa.ResourceManager()
         self.instrument = resource_manager.open_resource(address)
         
@@ -22,10 +23,19 @@ class visa_instrument():
         self.instrument.write(*args, **kwargs)
         
     def read(self, *args, **kwargs):
-        return self.instrument.read(*args, **kwargs)
+        if self.remove_termination:
+            return self.instrument.read(*args, **kwargs).rstrip()
+        else:
+            return self.instrument.read(*args, **kwargs)
         
     def query(self, *args, **kwargs):
-        return self.instrument.query(*args, **kwargs)
+        if self.remove_termination:
+            return self.instrument.query(*args, **kwargs).rstrip()
+        else:
+            return self.instrument.query(*args, **kwargs)
+    
+    def close(self):
+        self.instrument.close()
 
 
 if __name__ == '__main__' :
