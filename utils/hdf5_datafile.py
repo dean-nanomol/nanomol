@@ -11,7 +11,7 @@ from tkinter import Tk, filedialog
 
 class hdf5_datafile(h5py.File):
     
-    def __init__(self, mode):
+    def __init__(self, mode='r'):
         """
         mode: str
             
