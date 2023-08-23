@@ -10,7 +10,7 @@ from nanomol.instruments.visa_instrument import visa_instrument
 class keithley_2600A(visa_instrument):
     
     def __init__(self, address=''):
-        super(keithley_2600A, self).__init__(address)
+        super().__init__(address)
         self.reset()
     
     def get_source_function(self, ch):

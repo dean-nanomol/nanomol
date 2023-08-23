@@ -14,7 +14,6 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 class hdf5_viewer(QtWidgets.QWidget):
     
     def __init__(self, datafile):
-        super(hdf5_viewer, self).__init__()
         self.datafile = datafile
         uic.loadUi(r'hdf5_viewer.ui', self)
         self.initialise_plot()
