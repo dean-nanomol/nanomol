@@ -15,6 +15,20 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_8">
+     <item>
+      <widget class="QLabel" name="label_17">
+       <property name="text">
+        <string>description</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="description_lineEdit"/>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>measurement mode</string>
@@ -55,7 +69,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="V_GS_min_ouput_doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="V_GS_min_output_doubleSpinBox">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -97,12 +111,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="V_GS_max_ouput_doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="V_GS_max_output_doubleSpinBox">
             <property name="decimals">
              <number>3</number>
             </property>
             <property name="value">
-             <double>5.000000000000000</double>
+             <double>1.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -136,7 +150,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="V_GS_step_ouput_doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="V_GS_step_output_doubleSpinBox">
             <property name="decimals">
              <number>3</number>
             </property>
@@ -144,7 +158,7 @@
              <double>1.000000000000000</double>
             </property>
             <property name="value">
-             <double>1.000000000000000</double>
+             <double>0.500000000000000</double>
             </property>
            </widget>
           </item>
@@ -173,7 +187,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="V_DS_min_ouput_doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="V_DS_min_output_doubleSpinBox">
             <property name="decimals">
              <number>3</number>
             </property>
@@ -209,12 +223,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="V_DS_max_ouput_doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="V_DS_max_output_doubleSpinBox">
             <property name="decimals">
              <number>3</number>
             </property>
             <property name="value">
-             <double>5.000000000000000</double>
+             <double>2.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -248,7 +262,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="V_DS_step_ouput_doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="V_DS_step_output_doubleSpinBox">
             <property name="decimals">
              <number>3</number>
             </property>
@@ -256,7 +270,7 @@
              <double>0.050000000000000</double>
             </property>
             <property name="value">
-             <double>0.050000000000000</double>
+             <double>0.200000000000000</double>
             </property>
            </widget>
           </item>
