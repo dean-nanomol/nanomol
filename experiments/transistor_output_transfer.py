@@ -38,28 +38,36 @@ class transistor_output_transfer(interactive_ui):
             measurement_thread.start()
             
     def run_measurement(self):
-        self.active_group = self.datafile.create_group('test_group')
         self.configure_measurement()
+        # set channels to start from first point when output is turned on
+        self.V1_active = self.V1[0]
+        self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
         self.smu.set_output(self.V1_ch, 1)
-        self.smu.set_output(self.V2_ch, 1)
-        for self.active_V1 in self.V1:
+        for self.V1_active in self.V1:
+            active_curve_name = self.datafile.get_unique_group_name(self.active_device_group, basename='curve')
+            self.active_curve_group = self.active_device_group.create_group(active_curve_name)
+            self.initialise_datasets()
             self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-            for self.active_V2 in self.V2:
+            self.V2_active = self.V2[0]
+            self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
+            self.smu.set_output(self.V2_ch, 1)
+            for self.V2_active in self.V2:
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                measured_V1, measured_I1 = self.smu.measure(self.V1_ch, 'iv')
-                measured_V2, measured_I2 = self.smu.measure(self.V2_ch, 'iv')
-                self.measured_V1.append(measured_V1)
-                self.measured_I1.append(measured_I1)
-                self.measured_V2.append(measured_V2)
-                self.measured_I2.append(measured_I2)
-            self.save_dataset()
+                measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
+                measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                self.data['measured_V1'].append(measured_V1)
+                self.data['measured_I1'].append(measured_I1)
+                self.data['measured_V2'].append(measured_V2)
+                self.data['measured_I2'].append(measured_I2)
+            self.smu.set_output(self.V2_ch, 0)
+            self.save_data()
         self.smu.set_output(self.V1_ch, 0)
-        self.smu.set_output(self.V2_ch, 0)
         self.measurement_is_running = False
-        
-        
+    
+    
     def configure_measurement(self):
-        self.attrs = {}
+        active_device_name = self.datafile.get_unique_group_name(self.datafile, basename='device', max_N=1000)
+        self.active_device_group =  self.datafile.create_group(active_device_name)
         if self.measurement_mode == 'output':
             self.V1_ch, self.V2_ch = self.smu_channels['GS'], self.smu_channels['DS']
             self.V1_label, self.V2_label = 'GS', 'DS'
@@ -70,16 +78,12 @@ class transistor_output_transfer(interactive_ui):
             self.V1_label, self.V2_label = 'DS', 'GS'
             self.V1 = np.arange(self.V_DS_min_transfer, self.DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
             self.V2 = np.arange(self.V_GS_min_transfer, self.GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
-        # set channels to start from first point when output is turned on
-        self.measured_V1 = []
-        self.measured_I1 = []
-        self.measured_V2 = []
-        self.measured_I2 = []
-        self.V1_active = self.V1[0]
-        self.V2_active = self.V2[0]
-        self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-        self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-        
+    
+    def initialise_datasets(self):
+        self.data = {'measured_V1':[],
+                     'measured_I1':[],
+                     'measured_V2':[],
+                     'measured_I2':[]  }
     
     def set_measurement_mode(self):
         if self.output_mode_radiobutton.isChecked():
@@ -87,18 +91,21 @@ class transistor_output_transfer(interactive_ui):
         elif self.transfer_mode_radiobutton.isChecked():
             self.measurement_mode = 'transfer'
        
-    ### TO DO: append/create dataset; append() does not exist, maybe could just use create() at the end of V2 loop
-    def save_datapoint(self):
-        self.active_group.append_dataset()
+    def save_data(self):
+        for dataset_name, data in self.data.items():
+            self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
+        
             
         
 if __name__ == '__main__' :
     
     datafile = hdf5_datafile(mode='x')
+    #datafile_viewer = hdf5_viewer(datafile)
     
     experiment_app = QtWidgets.QApplication([])
     experiment = transistor_output_transfer(datafile, 'GPIB0::27::INSTR')
-    #experiment = transistor_output_transfer('GPIB0::27::INSTR')
+    
+    #datafile_viewer.show()
     experiment.show()
     experiment_app.exec()
     

@@ -33,7 +33,7 @@ class hdf5_datafile(h5py.File):
         else:
             filename = filedialog.asksaveasfilename(initialfile=date, defaultextension='.hdf5')
         # pass file name and path to h5py library File constructor
-        super(hdf5_datafile, self).__init__(name=filename, mode=mode)
+        super().__init__(name=filename, mode=mode)
     
     
     def get_unique_group_name(self, parent_group, basename='group', max_N=1000):
