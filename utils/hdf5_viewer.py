@@ -16,7 +16,7 @@ class hdf5_viewer(QtWidgets.QWidget):
     def __init__(self, datafile):
         super().__init__()
         self.datafile = datafile
-        uic.loadUi(r'hdf5_viewer.ui', self)
+        uic.loadUi(r'C:\Users\deankos\Documents\GitHub\nanomol\utils\hdf5_viewer.ui', self)
         self.initialise_plot()
         self.load_datafile_tree()
         self.datafile_treeview_Y.selectionModel().selectionChanged.connect(self.update_data_toPlot_Y)
