@@ -90,12 +90,14 @@ class transistor_output_transfer(interactive_ui):
             self.measurement_mode = 'output'
         elif self.transfer_mode_radiobutton.isChecked():
             self.measurement_mode = 'transfer'
-       
+    
     def save_data(self):
         for dataset_name, data in self.data.items():
+            dataset_name.replace('1', '_{}'.format(self.V1_label) )
+            dataset_name.replace('2', '_{}'.format(self.V2_label) )
             self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
-        
-            
+    
+    
         
 if __name__ == '__main__' :
     
