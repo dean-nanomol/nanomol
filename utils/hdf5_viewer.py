@@ -6,6 +6,7 @@ Created on Thu Jun 15 10:39:21 2023
 """
 
 import numpy as np
+import os
 import h5py
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
@@ -16,7 +17,8 @@ class hdf5_viewer(QtWidgets.QWidget):
     def __init__(self, datafile):
         super().__init__()
         self.datafile = datafile
-        uic.loadUi(r'C:\Users\deankos\Documents\GitHub\nanomol\utils\hdf5_viewer.ui', self)
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'hdf5_viewer.ui')
+        uic.loadUi(ui_file_path, self)
         self.initialise_plot()
         self.reload_datafile_pushbutton.clicked.connect(self.reload_datafile)
         self.reload_datafile()
