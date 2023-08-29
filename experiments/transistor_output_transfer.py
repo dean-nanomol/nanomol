@@ -8,6 +8,7 @@ Created on Tue Aug 22 12:02:09 2023
 import numpy as np
 import threading
 import time
+import os
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.keithley_2600A import keithley_2600A
@@ -21,9 +22,10 @@ class transistor_output_transfer(interactive_ui):
         super().__init__()
         self.datafile = datafile
         self.smu = keithley_2600A(smu_address)
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_output_transfer.ui')
+        uic.loadUi(ui_file_path, self)
         # set gate-source and drain-source channels
         self.smu_channels = {'GS': 'a', 'DS': 'b'}
-        uic.loadUi(r'transistor_output_transfer.ui', self)
         self.connect_widgets_by_name()
         self.output_mode_radiobutton.clicked.connect(self.set_measurement_mode)
         self.transfer_mode_radiobutton.clicked.connect(self.set_measurement_mode)
@@ -51,10 +53,12 @@ class transistor_output_transfer(interactive_ui):
             self.V2_active = self.V2[0]
             self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
             self.smu.set_output(self.V2_ch, 1)
+            t0 = time.time()
             for self.V2_active in self.V2:
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                 measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
                 measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                self.data['time'].append(time.time()-t0)
                 self.data['measured_V1'].append(measured_V1)
                 self.data['measured_I1'].append(measured_I1)
                 self.data['measured_V2'].append(measured_V2)
@@ -80,7 +84,8 @@ class transistor_output_transfer(interactive_ui):
             self.V2 = np.arange(self.V_GS_min_transfer, self.GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
     
     def initialise_datasets(self):
-        self.data = {'measured_V1':[],
+        self.data = {'time':[],
+                     'measured_V1':[],
                      'measured_I1':[],
                      'measured_V2':[],
                      'measured_I2':[]  }
