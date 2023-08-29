@@ -18,9 +18,8 @@ class hdf5_viewer(QtWidgets.QWidget):
         self.datafile = datafile
         uic.loadUi(r'C:\Users\deankos\Documents\GitHub\nanomol\utils\hdf5_viewer.ui', self)
         self.initialise_plot()
-        self.load_datafile_tree()
-        self.datafile_treeview_Y.selectionModel().selectionChanged.connect(self.update_data_toPlot_Y)
-        self.datafile_treeview_X.selectionModel().selectionChanged.connect(self.update_data_toPlot_X)
+        self.reload_datafile_pushbutton.clicked.connect(self.reload_datafile)
+        self.reload_datafile()
         self.data_Y_toPlot = []
         self.data_X_toPlot = []
         self.data_plot_labels = []
@@ -150,6 +149,11 @@ class hdf5_viewer(QtWidgets.QWidget):
             return True
         else:
             return False
+        
+    def reload_datafile(self):
+        self.load_datafile_tree()
+        self.datafile_treeview_Y.selectionModel().selectionChanged.connect(self.update_data_toPlot_Y)
+        self.datafile_treeview_X.selectionModel().selectionChanged.connect(self.update_data_toPlot_X)
         
 if __name__ == '__main__' :
     

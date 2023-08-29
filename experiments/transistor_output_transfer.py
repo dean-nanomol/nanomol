@@ -97,19 +97,18 @@ class transistor_output_transfer(interactive_ui):
             dataset_name = dataset_name.replace('2', '_{}'.format(self.V2_label) )
             self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
     
-    
         
 if __name__ == '__main__' :
     
     datafile = hdf5_datafile(mode='x')
     
-    
     experiment_app = QtWidgets.QApplication([])
+    
     experiment = transistor_output_transfer(datafile, 'GPIB0::27::INSTR')
     datafile_viewer = hdf5_viewer(datafile)
     # TO DO: fix absolute path for ui in hdf5_viewer
-    # TO DO: connect refresh button in hdf5_viewer
-    datafile_viewer.show()
     experiment.show()
+    datafile_viewer.show()
+    
     experiment_app.exec()
     
