@@ -5,7 +5,11 @@ Created on Wed Aug 16 14:47:39 2023
 @author: deankos
 """
 
+import os
+from functools import partial
+from PyQt5 import QtWidgets, uic
 from nanomol.instruments.visa_instrument import visa_instrument
+from nanomol.utils.interactive_ui import interactive_ui
 
 class keithley_2600A(visa_instrument):
     
@@ -190,7 +194,54 @@ class keithley_2600A(visa_instrument):
     
     def reset(self):
         self.write('reset()')
+        
+    def get_settings(self):
+        settings = {'a_function': self.get_source_function('a'),
+                    'b_function': self.get_source_function('b'),
+                    'a_V_source_limit': self.get_source_limit('a', 'v'),
+                    'b_V_source_limit': self.get_source_limit('b', 'v'),
+                    'a_I_source_limit': self.get_source_limit('a', 'i'),
+                    'b_I_source_limit': self.get_source_limit('b', 'i'),
+                    'a_V_source_range': self.get_source_range('a', 'v'),
+                    'b_V_source_range': self.get_source_range('b', 'v'),
+                    'a_I_source_range': self.get_source_range('a', 'i'),
+                    'b_I_source_range': self.get_source_range('b', 'i'),
+                    'a_V_measure_range': self.get_measure_range('a', 'v'),
+                    'b_V_measure_range': self.get_measure_range('b', 'v'),
+                    'a_I_measure_range': self.get_measure_range('a', 'i'),
+                    'b_I_measure_range': self.get_measure_range('b', 'i'),
+                    'a_nplc': self.get_nplc('a'),
+                    'b_nplc': self.get_nplc('b')
+                    }
+        return settings
+
+
+class keithley_2600A_ui(interactive_ui):
+    """
+    User interface for basic settings of Keithley 2600A instruments.
+    Inherits from interactive_ui, so self.connected_widgets contains all settings available through the ui.
+    """
+    
+    def __init__(self, keithley):
+        super().__init__()
+        self.keithley = keithley
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'keithley_2600A.ui')
+        uic.loadUi(ui_file_path, self)
+        self.V_source_range_a_comboBox.currentTextChanged.connect(partial(self.keithley.set_source_range,'a','v') )
+        self.V_source_limit_a_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_source_limit,'a','v') )
+        self.I_measure_range_a_comboBox.currentTextChanged.connect(partial(self.keithley.set_measure_range,'a','i') )
+        self.nplc_a_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_nplc, 'a') )
+        self.V_source_range_b_comboBox.currentTextChanged.connect(partial(self.keithley.set_source_range,'b','v') )
+        self.V_source_limit_b_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_source_limit,'b','v') )
+        self.I_measure_range_b_comboBox.currentTextChanged.connect(partial(self.keithley.set_measure_range,'b','i') )
+        self.nplc_b_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_nplc, 'b') )
+        self.connect_widgets_by_name()
     
 if __name__ == '__main__' :
     
     myKeithley = keithley_2600A(address = 'GPIB0::27::INSTR')
+    
+    ui_app = QtWidgets.QApplication([])
+    ui = keithley_2600A_ui(myKeithley)
+    ui.show()
+    ui_app.exec()
