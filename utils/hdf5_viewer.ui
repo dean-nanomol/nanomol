@@ -156,6 +156,9 @@
         </property>
         <item>
          <widget class="QTableView" name="attrs_tableview">
+          <property name="horizontalScrollMode">
+           <enum>QAbstractItemView::ScrollPerItem</enum>
+          </property>
           <attribute name="horizontalHeaderVisible">
            <bool>false</bool>
           </attribute>
@@ -164,6 +167,12 @@
           </attribute>
           <attribute name="verticalHeaderVisible">
            <bool>false</bool>
+          </attribute>
+          <attribute name="verticalHeaderMinimumSectionSize">
+           <number>10</number>
+          </attribute>
+          <attribute name="verticalHeaderDefaultSectionSize">
+           <number>15</number>
           </attribute>
          </widget>
         </item>
