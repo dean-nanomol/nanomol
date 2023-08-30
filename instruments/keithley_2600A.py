@@ -9,7 +9,6 @@ import os
 from functools import partial
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.visa_instrument import visa_instrument
-from nanomol.utils.interactive_ui import interactive_ui
 
 class keithley_2600A(visa_instrument):
     
@@ -216,10 +215,9 @@ class keithley_2600A(visa_instrument):
         return settings
 
 
-class keithley_2600A_ui(interactive_ui):
+class keithley_2600A_ui(QtWidgets.QWidget):
     """
     User interface for basic settings of Keithley 2600A instruments.
-    Inherits from interactive_ui, so self.connected_widgets contains all settings available through the ui.
     """
     
     def __init__(self, keithley):
@@ -227,15 +225,69 @@ class keithley_2600A_ui(interactive_ui):
         self.keithley = keithley
         ui_file_path = os.path.join(os.path.dirname(__file__), 'keithley_2600A.ui')
         uic.loadUi(ui_file_path, self)
-        self.V_source_range_a_comboBox.currentTextChanged.connect(partial(self.keithley.set_source_range,'a','v') )
-        self.V_source_limit_a_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_source_limit,'a','v') )
-        self.I_measure_range_a_comboBox.currentTextChanged.connect(partial(self.keithley.set_measure_range,'a','i') )
-        self.nplc_a_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_nplc, 'a') )
-        self.V_source_range_b_comboBox.currentTextChanged.connect(partial(self.keithley.set_source_range,'b','v') )
-        self.V_source_limit_b_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_source_limit,'b','v') )
-        self.I_measure_range_b_comboBox.currentTextChanged.connect(partial(self.keithley.set_measure_range,'b','i') )
-        self.nplc_b_doubleSpinBox.valueChanged.connect(partial(self.keithley.set_nplc, 'b') )
-        self.connect_widgets_by_name()
+        self.V_source_range_a_comboBox.currentTextChanged.connect(self.update_setting)
+        self.V_source_limit_a_doubleSpinBox.valueChanged.connect(self.update_setting)
+        self.V_measure_range_a_comboBox.currentTextChanged.connect(self.update_setting)
+        self.I_source_range_a_comboBox.currentTextChanged.connect(self.update_setting)
+        self.I_source_limit_a_doubleSpinBox.valueChanged.connect(self.update_setting)
+        self.I_measure_range_a_comboBox.currentTextChanged.connect(self.update_setting)
+        self.nplc_a_doubleSpinBox.valueChanged.connect(self.update_setting)
+        self.V_source_range_b_comboBox.currentTextChanged.connect(self.update_setting)
+        self.V_source_limit_b_doubleSpinBox.valueChanged.connect(self.update_setting)
+        self.V_measure_range_b_comboBox.currentTextChanged.connect(self.update_setting)
+        self.I_source_range_b_comboBox.currentTextChanged.connect(self.update_setting)
+        self.I_source_limit_b_doubleSpinBox.valueChanged.connect(self.update_setting)
+        self.I_measure_range_b_comboBox.currentTextChanged.connect(self.update_setting)
+        self.nplc_b_doubleSpinBox.valueChanged.connect(self.update_setting)
+        
+    def update_setting(self, calling_widget=None):
+        """
+        Check which widget emitted the signal and update the corresponding keithley setting.
+        If calling method directly pass calling_widget.
+        """
+        sender = self.sender()
+        if sender is None:
+            # function called without user interaction, e.g. through update_all_settings
+            sender = calling_widget
+        if sender == self.V_source_range_a_comboBox:
+            self.keithley.set_source_range('a', 'v', sender.currentText() )
+        elif sender == self.V_source_limit_a_doubleSpinBox:
+            self.keithley.set_source_limit('a', 'v', sender.value() )
+        elif sender == self.V_measure_range_a_comboBox:
+            self.keithley.set_measure_range('a', 'v', sender.currentText() )
+        elif sender == self.I_source_range_a_comboBox:
+            self.keithley.set_source_range('a', 'i', sender.currentText() )
+        elif sender == self.I_source_limit_a_doubleSpinBox:
+            self.keithley.set_source_limit('a', 'i', sender.value() )
+        elif sender == self.I_measure_range_a_comboBox:
+            self.keithley.set_measure_range('a', 'i', sender.currentText() )
+        elif sender == self.nplc_a_doubleSpinBox:
+            self.keithley.set_nplc('a', sender.value() )
+        elif sender == self.V_source_range_b_comboBox:
+            self.keithley.set_source_range('b', 'v', sender.currentText() )
+        elif sender == self.V_source_limit_b_doubleSpinBox:
+            self.keithley.set_source_limit('b', 'v', sender.value() )
+        elif sender == self.V_measure_range_b_comboBox:
+            self.keithley.set_measure_range('b', 'v', sender.currentText() )
+        elif sender == self.I_source_range_b_comboBox:
+            self.keithley.set_source_range('b', 'i', sender.currentText() )
+        elif sender == self.I_source_limit_b_doubleSpinBox:
+            self.keithley.set_source_limit('b', 'i', sender.value() )
+        elif sender == self.I_measure_range_b_comboBox:
+            self.keithley.set_measure_range('b', 'i', sender.currentText() )
+        elif sender == self.nplc_b_doubleSpinBox:
+            self.keithley.set_nplc('b', sender.value() )
+            
+    def update_all_settings(self):
+        """
+        Read current state of all ui items and update keithley settings.
+        """
+        widgets = []
+        widget_types = [QtWidgets.QDoubleSpinBox, QtWidgets.QComboBox]
+        for widget_type in widget_types:
+            widgets.extend(self.findChildren(widget_type))
+        for widget in widgets:
+            self.update_setting(calling_widget=widget)
     
 if __name__ == '__main__' :
     
