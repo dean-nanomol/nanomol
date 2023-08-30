@@ -239,6 +239,7 @@ class keithley_2600A_ui(QtWidgets.QWidget):
         self.I_source_limit_b_doubleSpinBox.valueChanged.connect(self.update_setting)
         self.I_measure_range_b_comboBox.currentTextChanged.connect(self.update_setting)
         self.nplc_b_doubleSpinBox.valueChanged.connect(self.update_setting)
+        self.update_all_settings()
         
     def update_setting(self, calling_widget=None):
         """
