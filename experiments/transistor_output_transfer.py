@@ -44,6 +44,7 @@ class transistor_output_transfer(interactive_ui):
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
         self.set_curve_loop()
+        self.setup_plot_widgets()
         self.measurement_is_running = False  # flag to start and stop a measurement
     
     def start_measurement(self):
@@ -57,19 +58,25 @@ class transistor_output_transfer(interactive_ui):
             self.measurement_is_running = False
             
     def run_measurement(self):
+        self.reset_plots()
         self.configure_measurement()
         # set channels to start from first point when output is turned on
         self.V1_active = self.V1[0]
         self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+        self.color_index = 0
         self.smu.set_output(self.V1_ch, 1)
         for self.V1_active in self.V1:
             active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
             self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
             self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
+            # reset curve datasets for new curve
             self.initialise_datasets()
             self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
             self.V2_active = self.V2[0]
             self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
+            # prepare new plot line for upcoming data
+            self.create_new_plot_lines()
+            self.color_index += 1
             t0 = time.time()
             self.smu.set_output(self.V2_ch, 1)
             for self.V2_active in self.V2:
@@ -81,6 +88,7 @@ class transistor_output_transfer(interactive_ui):
                 self.data['measured_I1'].append(measured_I1)
                 self.data['measured_V2'].append(measured_V2)
                 self.data['measured_I2'].append(measured_I2)
+                self.update_plots()
                 if not self.measurement_is_running:
                     break
                 if self.delay_points != 0:
@@ -176,6 +184,47 @@ class transistor_output_transfer(interactive_ui):
             self.curve_loop = False
         elif self.curve_loop_radioButton.isChecked():
             self.curve_loop = True
+            
+    def setup_plot_widgets(self):
+        self.V1_iv_plot = pg.PlotWidget()
+        self.V1_time_plot = pg.PlotWidget()
+        self.V2_iv_plot = pg.PlotWidget()
+        self.V2_time_plot = pg.PlotWidget()
+        self.plot_layout.replaceWidget(self.plot_placeholder_1, self.V1_iv_plot)
+        self.plot_layout.replaceWidget(self.plot_placeholder_2, self.V1_time_plot)
+        self.plot_layout.replaceWidget(self.plot_placeholder_3, self.V2_iv_plot)
+        self.plot_layout.replaceWidget(self.plot_placeholder_4, self.V2_time_plot)
+        self.V1_iv_plot.setBackground('w')
+        self.V1_time_plot.setBackground('w')
+        self.V2_iv_plot.setBackground('w')
+        self.V2_time_plot.setBackground('w')
+        
+        
+    def reset_plots(self):
+        self.V1_iv_plot.clear()
+        self.V1_time_plot.clear()
+        self.V2_iv_plot.clear()
+        self.V2_time_plot.clear()
+        
+    def create_new_plot_lines(self):
+        color = pg.intColor(self.color_index, hues=self.V1.size)
+        self.active_plot_lines = {
+            'V1_iv': self.V1_iv_plot.plot(self.data['measured_V1'], self.data['measured_I1'], pen=pg.mkPen(color=color) ),
+            'V1_time': self.V1_time_plot.plot(self.data['time'], self.data['measured_I1'], pen=pg.mkPen(color=color) ),
+            'V2_iv': self.V2_iv_plot.plot(self.data['measured_V2'], self.data['measured_I2'], pen=pg.mkPen(color=color) ),
+            'V2_time': self.V2_time_plot.plot(self.data['time'], self.data['measured_I2'], pen=pg.mkPen(color=color) )
+            }
+        
+    def update_plots(self):
+        self.active_plot_lines['V1_iv'].setData(self.data['measured_V1'], self.data['measured_I1'])
+        self.active_plot_lines['V1_time'].setData(self.data['time'], self.data['measured_I1'])
+        self.active_plot_lines['V2_iv'].setData(self.data['measured_V2'], self.data['measured_I2'])
+        self.active_plot_lines['V2_time'].setData(self.data['time'], self.data['measured_I2'])
+        
+            
+    def shutdown(self):
+        self.datafile.close()
+        self.smu.close()
     
         
 if __name__ == '__main__' :
