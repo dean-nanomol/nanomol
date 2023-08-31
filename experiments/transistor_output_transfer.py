@@ -42,48 +42,46 @@ class transistor_output_transfer(interactive_ui):
             
     def stop_measurement(self):
         if self.measurement_is_running:
-            raise MeasurementStopped
-            self.smu.set_output(self.V1_ch, 0)
-            self.smu.set_output(self.V2_ch, 0)
-            self.datafile.flush()
+            self.measurement_is_running = False
             
     def run_measurement(self):
-        try:
-            self.configure_measurement()
-            # set channels to start from first point when output is turned on
-            self.V1_active = self.V1[0]
+        self.configure_measurement()
+        # set channels to start from first point when output is turned on
+        self.V1_active = self.V1[0]
+        self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+        self.smu.set_output(self.V1_ch, 1)
+        for self.V1_active in self.V1:
+            active_curve_name = self.datafile.get_unique_group_name(self.active_device_group, basename='curve')
+            self.active_curve_group = self.active_device_group.create_group(active_curve_name)
+            self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
+            self.initialise_datasets()
             self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-            self.smu.set_output(self.V1_ch, 1)
-            for self.V1_active in self.V1:
-                active_curve_name = self.datafile.get_unique_group_name(self.active_device_group, basename='curve')
-                self.active_curve_group = self.active_device_group.create_group(active_curve_name)
-                self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
-                self.initialise_datasets()
-                self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-                self.V2_active = self.V2[0]
+            self.V2_active = self.V2[0]
+            self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
+            t0 = time.time()
+            self.smu.set_output(self.V2_ch, 1)
+            for self.V2_active in self.V2:
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                self.smu.set_output(self.V2_ch, 1)
-                t0 = time.time()
-                for self.V2_active in self.V2:
-                    self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                    measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
-                    measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
-                    self.data['time'].append(time.time()-t0)
-                    self.data['measured_V1'].append(measured_V1)
-                    self.data['measured_I1'].append(measured_I1)
-                    self.data['measured_V2'].append(measured_V2)
-                    self.data['measured_I2'].append(measured_I2)
-                    if self.delay_points != 0:
-                        time.sleep(self.delay_points)
-                self.smu.set_output(self.V2_ch, 0)
-                self.save_data()
-                if self.delay_curves != 0:
-                    time.sleep(self.delay_curves)
-            self.smu.set_output(self.V1_ch, 0)
-            self.measurement_is_running = False
-        except MeasurementStopped:
-            print('stopping')
-            return
+                measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
+                measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                self.data['time'].append(time.time() - t0)
+                self.data['measured_V1'].append(measured_V1)
+                self.data['measured_I1'].append(measured_I1)
+                self.data['measured_V2'].append(measured_V2)
+                self.data['measured_I2'].append(measured_I2)
+                if not self.measurement_is_running:
+                    break
+                if self.delay_points != 0:
+                    time.sleep(self.delay_points)
+            self.smu.set_output(self.V2_ch, 0)
+            self.save_data()
+            if not self.measurement_is_running:
+                break
+            if self.delay_curves != 0:
+                time.sleep(self.delay_curves)
+        self.smu.set_output(self.V1_ch, 0)
+        self.measurement_is_running = False
+            
     
     def configure_measurement(self):
         self.smu.set_source_function('a', 1)
@@ -119,6 +117,9 @@ class transistor_output_transfer(interactive_ui):
         for dataset_name, data in self.data.items():
             dataset_name = dataset_name.replace('1', '_{}'.format(self.V1_label) )
             dataset_name = dataset_name.replace('2', '_{}'.format(self.V2_label) )
+            if dataset_name == 'time':  # shift time to start from zero
+                data = np.array(data)
+                data -= data[0]
             self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
         self.datafile.flush()
     
@@ -127,10 +128,6 @@ class transistor_output_transfer(interactive_ui):
             self.measurement_mode = 'output'
         elif self.transfer_mode_radiobutton.isChecked():
             self.measurement_mode = 'transfer'
-
-class MeasurementStopped(Exception):
-    """ Exception raised when measurement is stopped with stop button """
-    pass
     
         
 if __name__ == '__main__' :
