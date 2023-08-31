@@ -31,8 +31,20 @@ class transistor_output_transfer(interactive_ui):
         self.transfer_mode_radiobutton.clicked.connect(self.set_measurement_mode)
         self.start_pushbutton.clicked.connect(self.start_measurement)
         self.stop_pushbutton.clicked.connect(self.stop_measurement)
+        self.sweep_one_way_radioButton.clicked.connect(self.set_sweep_loop)
+        self.sweep_loop_radioButton.clicked.connect(self.set_sweep_loop)
+        self.curve_one_way_radioButton.clicked.connect(self.set_curve_loop)
+        self.curve_loop_radioButton.clicked.connect(self.set_curve_loop)
+        self.sweep_direction_positive_radioButton.clicked.connect(self.set_sweep_direction)
+        self.sweep_direction_negative_radioButton.clicked.connect(self.set_sweep_direction)
+        self.curve_direction_positive_radioButton.clicked.connect(self.set_curve_direction)
+        self.curve_direction_negative_radioButton.clicked.connect(self.set_curve_direction)
         self.set_measurement_mode()
-        self.measurement_is_running = False
+        self.set_sweep_direction()  # sweep is the external loop, V1
+        self.set_sweep_loop()
+        self.set_curve_direction()  # curve is the internal loop, V2
+        self.set_curve_loop()
+        self.measurement_is_running = False  # flag to start and stop a measurement
     
     def start_measurement(self):
         if not self.measurement_is_running:  # do nothing if measurement is already running
@@ -51,8 +63,8 @@ class transistor_output_transfer(interactive_ui):
         self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
         self.smu.set_output(self.V1_ch, 1)
         for self.V1_active in self.V1:
-            active_curve_name = self.datafile.get_unique_group_name(self.active_device_group, basename='curve')
-            self.active_curve_group = self.active_device_group.create_group(active_curve_name)
+            active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
+            self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
             self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
             self.initialise_datasets()
             self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
@@ -84,10 +96,13 @@ class transistor_output_transfer(interactive_ui):
             
     
     def configure_measurement(self):
+        """
+        Set output/transfer measurement type, define voltages to apply, save instrument settings and basic attributes.
+        """
+        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename='sweep', max_N=1000)
+        self.active_sweep_group =  self.datafile.create_group(active_sweep_name)
         self.smu.set_source_function('a', 1)
         self.smu.set_source_function('b', 1)
-        active_device_name = self.datafile.get_unique_group_name(self.datafile, basename='device', max_N=1000)
-        self.active_device_group =  self.datafile.create_group(active_device_name)
         if self.measurement_mode == 'output':
             self.V1_ch, self.V2_ch = self.smu_channels['GS'], self.smu_channels['DS']
             self.V1_label, self.V2_label = 'GS', 'DS'
@@ -98,13 +113,21 @@ class transistor_output_transfer(interactive_ui):
             self.V1_label, self.V2_label = 'DS', 'GS'
             self.V1 = np.arange(self.V_DS_min_transfer, self.DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
             self.V2 = np.arange(self.V_GS_min_transfer, self.GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
+        if self.sweep_direction == -1:
+            self.V1 = np.flip(self.V1)
+        if self.sweep_loop:
+            self.V1 = np.append(self.V1, np.flip(self.V1) )
+        if self.curve_direction == -1:
+            self.V2 = np.flip(self.V2)
+        if self.curve_loop:
+            self.V2 = np.append(self.V2, np.flip(self.V2) )
         # save measurement settings and attributes
-        self.active_device_group.attrs.create('description', self.description)
-        self.active_device_group.attrs.create('measurement_mode', self.measurement_mode)
+        self.active_sweep_group.attrs.create('description', self.description)
+        self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
         for key, value in self.smu.get_settings().items():
-            self.active_device_group.attrs.create('keithley_{}'.format(key), value)
+            self.active_sweep_group.attrs.create('keithley_{}'.format(key), value)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
-        self.active_device_group.attrs.create('timestamp', timestamp )
+        self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def initialise_datasets(self):
         self.data = {'time':[],
@@ -114,6 +137,7 @@ class transistor_output_transfer(interactive_ui):
                      'measured_I2':[]  }
         
     def save_data(self):
+        """ write data to hdf5 datafile """
         for dataset_name, data in self.data.items():
             dataset_name = dataset_name.replace('1', '_{}'.format(self.V1_label) )
             dataset_name = dataset_name.replace('2', '_{}'.format(self.V2_label) )
@@ -128,6 +152,30 @@ class transistor_output_transfer(interactive_ui):
             self.measurement_mode = 'output'
         elif self.transfer_mode_radiobutton.isChecked():
             self.measurement_mode = 'transfer'
+            
+    def set_sweep_direction(self):
+        if self.sweep_direction_positive_radioButton.isChecked():
+            self.sweep_direction = 1
+        elif self.sweep_direction_negative_radioButton.isChecked():
+            self.sweep_direction = -1
+    
+    def set_sweep_loop(self):
+        if self.sweep_one_way_radioButton.isChecked():
+            self.sweep_loop = False
+        elif self.sweep_loop_radioButton.isChecked():
+            self.sweep_loop = True
+    
+    def set_curve_direction(self):
+        if self.curve_direction_positive_radioButton.isChecked():
+            self.curve_direction = 1
+        elif self.curve_direction_negative_radioButton.isChecked():
+            self.curve_direction = -1
+    
+    def set_curve_loop(self):
+        if self.curve_one_way_radioButton.isChecked():
+            self.curve_loop = False
+        elif self.curve_loop_radioButton.isChecked():
+            self.curve_loop = True
     
         
 if __name__ == '__main__' :
