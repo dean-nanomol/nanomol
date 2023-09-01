@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>measurement_window</class>
+ <widget class="QWidget" name="measurement_window">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>793</width>
-    <height>750</height>
+    <width>792</width>
+    <height>676</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>transistor output/transfer</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -521,7 +521,7 @@
                <number>3</number>
               </property>
               <property name="value">
-               <double>1.000000000000000</double>
+               <double>0.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -560,7 +560,7 @@
                <number>3</number>
               </property>
               <property name="value">
-               <double>5.000000000000000</double>
+               <double>2.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -599,7 +599,7 @@
                <number>3</number>
               </property>
               <property name="value">
-               <double>4.000000000000000</double>
+               <double>1.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -669,7 +669,7 @@
                <number>3</number>
               </property>
               <property name="value">
-               <double>5.000000000000000</double>
+               <double>1.500000000000000</double>
               </property>
              </widget>
             </item>
@@ -708,7 +708,7 @@
                <number>3</number>
               </property>
               <property name="value">
-               <double>0.050000000000000</double>
+               <double>0.100000000000000</double>
               </property>
              </widget>
             </item>
@@ -814,27 +814,7 @@
    </item>
    <item>
     <layout class="QGridLayout" name="plot_layout">
-     <item row="0" column="0">
-      <widget class="QWidget" name="plot_placeholder_1" native="true">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QWidget" name="plot_placeholder_4" native="true">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
+     <item row="0" column="1">
       <widget class="QWidget" name="plot_placeholder_2" native="true">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -844,8 +824,15 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QWidget" name="plot_placeholder_3" native="true"/>
+     <item row="0" column="0">
+      <widget class="QWidget" name="plot_placeholder_1" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

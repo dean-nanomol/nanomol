@@ -39,12 +39,15 @@ class transistor_output_transfer(interactive_ui):
         self.sweep_direction_negative_radioButton.clicked.connect(self.set_sweep_direction)
         self.curve_direction_positive_radioButton.clicked.connect(self.set_curve_direction)
         self.curve_direction_negative_radioButton.clicked.connect(self.set_curve_direction)
+        self.plot_widgets_set_up = False  # flag to set plot labels only after measurement mode is first set
+        self.set_measurement_mode()
+        self.setup_plot_widgets()
         self.set_measurement_mode()
         self.set_sweep_direction()  # sweep is the external loop, V1
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
         self.set_curve_loop()
-        self.setup_plot_widgets()
+        
         self.measurement_is_running = False  # flag to start and stop a measurement
     
     def start_measurement(self):
@@ -58,8 +61,8 @@ class transistor_output_transfer(interactive_ui):
             self.measurement_is_running = False
             
     def run_measurement(self):
-        self.reset_plots()
         self.configure_measurement()
+        self.reset_plots()
         # set channels to start from first point when output is turned on
         self.V1_active = self.V1[0]
         self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
@@ -113,14 +116,12 @@ class transistor_output_transfer(interactive_ui):
         self.smu.set_source_function('b', 1)
         if self.measurement_mode == 'output':
             self.V1_ch, self.V2_ch = self.smu_channels['GS'], self.smu_channels['DS']
-            self.V1_label, self.V2_label = 'GS', 'DS'
             self.V1 = np.arange(self.V_GS_min_output, self.V_GS_max_output + self.V_GS_step_output, self.V_GS_step_output)
             self.V2 = np.arange(self.V_DS_min_output, self.V_DS_max_output + self.V_DS_step_output, self.V_DS_step_output)
         elif self.measurement_mode == 'transfer':
             self.V1_ch, self.V2_ch = self.smu_channels['DS'], self.smu_channels['GS']
-            self.V1_label, self.V2_label = 'DS', 'GS'
-            self.V1 = np.arange(self.V_DS_min_transfer, self.DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
-            self.V2 = np.arange(self.V_GS_min_transfer, self.GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
+            self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
+            self.V2 = np.arange(self.V_GS_min_transfer, self.V_GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
         self.V1_data_label = 'measured_V_{}'.format(self.V1_label)
         self.I1_data_label = 'measured_I_{}'.format(self.V1_label)
         self.V2_data_label = 'measured_V_{}'.format(self.V2_label)
@@ -160,8 +161,12 @@ class transistor_output_transfer(interactive_ui):
     def set_measurement_mode(self):
         if self.output_mode_radiobutton.isChecked():
             self.measurement_mode = 'output'
+            self.V1_label, self.V2_label = 'GS', 'DS'
         elif self.transfer_mode_radiobutton.isChecked():
             self.measurement_mode = 'transfer'
+            self.V1_label, self.V2_label = 'DS', 'GS'
+        if self.plot_widgets_set_up:
+            self.set_plot_labels()
             
     def set_sweep_direction(self):
         if self.sweep_direction_positive_radioButton.isChecked():
@@ -188,48 +193,40 @@ class transistor_output_transfer(interactive_ui):
             self.curve_loop = True
             
     def setup_plot_widgets(self):
-        self.V1_iv_plot = pg.PlotWidget()
-        self.V1_time_plot = pg.PlotWidget()
-        self.V2_iv_plot = pg.PlotWidget()
-        self.V2_time_plot = pg.PlotWidget()
-        self.plot_layout.replaceWidget(self.plot_placeholder_1, self.V1_iv_plot)
-        self.plot_layout.replaceWidget(self.plot_placeholder_2, self.V1_time_plot)
-        self.plot_layout.replaceWidget(self.plot_placeholder_3, self.V2_iv_plot)
-        self.plot_layout.replaceWidget(self.plot_placeholder_4, self.V2_time_plot)
-        self.V1_iv_plot.setBackground('w')
-        self.V1_time_plot.setBackground('w')
-        self.V2_iv_plot.setBackground('w')
-        self.V2_time_plot.setBackground('w')
-        
+        self.I2_vs_V2 = pg.PlotWidget()
+        self.I1_vs_V2 = pg.PlotWidget()
+        self.plot_layout.replaceWidget(self.plot_placeholder_1, self.I2_vs_V2)
+        self.plot_layout.replaceWidget(self.plot_placeholder_2, self.I1_vs_V2)
+        self.I2_vs_V2.setBackground('w')
+        self.I1_vs_V2.setBackground('w')
+        self.plot_widgets_set_up = True
         
     def reset_plots(self):
-        self.V1_iv_plot.clear()
-        self.V1_time_plot.clear()
-        self.V2_iv_plot.clear()
-        self.V2_time_plot.clear()
+        self.I2_vs_V2.clear()
+        self.I1_vs_V2.clear()
+    
+    def set_plot_labels(self):
+        # setting labels when measurement thread is already running seems to crash the program
+        # likely because Qt objects can't be accessed from a thread other than where they were created
+        self.I2_vs_V2.setLabel('bottom', 'V_{} [V]'.format(self.V2_label) )
+        self.I2_vs_V2.setLabel('left', 'I_{} [A]'.format(self.V2_label) )
+        self.I1_vs_V2.setLabel('bottom', 'V_{} [V]'.format(self.V2_label) )
+        self.I1_vs_V2.setLabel('left', 'I_{} [A]'.format(self.V1_label) )
+        self.I2_vs_V2.addLegend()
+        self.I1_vs_V2.addLegend()
         
     def create_new_plot_lines(self):
         color = pg.intColor(self.color_index, hues=self.V1.size)
         pen = pg.mkPen(color=color)
-        self.active_plot_lines = {
-            'V_{}_iv'.format(self.V1_label): self.V1_iv_plot.plot(self.data[self.V1_data_label], 
-                                                                  self.data[self.I1_data_label], pen=pen ),
-            'V_{}_time'.format(self.V1_label): self.V1_time_plot.plot(self.data['time'],
-                                                                      self.data[self.I1_data_label], pen=pen ),
-            'V_{}_iv'.format(self.V2_label): self.V2_iv_plot.plot(self.data[self.V2_data_label],
-                                                                  self.data[self.I2_data_label], pen=pen ),
-            'V_{}_time'.format(self.V2_label): self.V2_time_plot.plot(self.data['time'],
-                                                                      self.data[self.I2_data_label], pen=pen ) }
+        self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.V2_data_label], self.data[self.I2_data_label],
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+        self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.V2_data_label], self.data[self.I1_data_label],
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
         
     def update_plots(self):
-        self.active_plot_lines['V_{}_iv'.format(self.V1_label)].setData(self.data[self.V1_data_label],
-                                                                        self.data[self.I1_data_label] )
-        self.active_plot_lines['V_{}_time'.format(self.V1_label)].setData(self.data['time'], self.data[self.I1_data_label] )
-        self.active_plot_lines['V_{}_iv'.format(self.V2_label)].setData(self.data[self.V2_data_label],
-                                                                        self.data[self.I2_data_label] )
-        self.active_plot_lines['V_{}_time'.format(self.V2_label)].setData(self.data['time'], self.data[self.I2_data_label] )
-        
-            
+        self.I2_vs_V2_line.setData(self.data[self.V2_data_label], self.data[self.I2_data_label] )
+        self.I1_vs_V2_line.setData(self.data[self.V2_data_label], self.data[self.I1_data_label] )
+    
     def shutdown(self):
         self.datafile.close()
         self.smu.close()
