@@ -84,10 +84,10 @@ class transistor_output_transfer(interactive_ui):
                 measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
                 measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
                 self.data['time'].append(time.time() - t0)
-                self.data['measured_V1'].append(measured_V1)
-                self.data['measured_I1'].append(measured_I1)
-                self.data['measured_V2'].append(measured_V2)
-                self.data['measured_I2'].append(measured_I2)
+                self.data[self.V1_data_label].append(measured_V1)
+                self.data[self.I1_data_label].append(measured_I1)
+                self.data[self.V2_data_label].append(measured_V2)
+                self.data[self.I2_data_label].append(measured_I2)
                 self.update_plots()
                 if not self.measurement_is_running:
                     break
@@ -121,6 +121,10 @@ class transistor_output_transfer(interactive_ui):
             self.V1_label, self.V2_label = 'DS', 'GS'
             self.V1 = np.arange(self.V_DS_min_transfer, self.DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
             self.V2 = np.arange(self.V_GS_min_transfer, self.GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
+        self.V1_data_label = 'measured_V_{}'.format(self.V1_label)
+        self.I1_data_label = 'measured_I_{}'.format(self.V1_label)
+        self.V2_data_label = 'measured_V_{}'.format(self.V2_label)
+        self.I2_data_label = 'measured_I_{}'.format(self.V2_label)
         if self.sweep_direction == -1:
             self.V1 = np.flip(self.V1)
         if self.sweep_loop:
@@ -139,16 +143,14 @@ class transistor_output_transfer(interactive_ui):
     
     def initialise_datasets(self):
         self.data = {'time':[],
-                     'measured_V1':[],
-                     'measured_I1':[],
-                     'measured_V2':[],
-                     'measured_I2':[]  }
+                     self.V1_data_label: [],
+                     self.I1_data_label: [],
+                     self.V2_data_label: [],
+                     self.I2_data_label: []  }
         
     def save_data(self):
         """ write data to hdf5 datafile """
         for dataset_name, data in self.data.items():
-            dataset_name = dataset_name.replace('1', '_{}'.format(self.V1_label) )
-            dataset_name = dataset_name.replace('2', '_{}'.format(self.V2_label) )
             if dataset_name == 'time':  # shift time to start from zero
                 data = np.array(data)
                 data -= data[0]
@@ -208,18 +210,24 @@ class transistor_output_transfer(interactive_ui):
         
     def create_new_plot_lines(self):
         color = pg.intColor(self.color_index, hues=self.V1.size)
+        pen = pg.mkPen(color=color)
         self.active_plot_lines = {
-            'V1_iv': self.V1_iv_plot.plot(self.data['measured_V1'], self.data['measured_I1'], pen=pg.mkPen(color=color) ),
-            'V1_time': self.V1_time_plot.plot(self.data['time'], self.data['measured_I1'], pen=pg.mkPen(color=color) ),
-            'V2_iv': self.V2_iv_plot.plot(self.data['measured_V2'], self.data['measured_I2'], pen=pg.mkPen(color=color) ),
-            'V2_time': self.V2_time_plot.plot(self.data['time'], self.data['measured_I2'], pen=pg.mkPen(color=color) )
-            }
+            'V_{}_iv'.format(self.V1_label): self.V1_iv_plot.plot(self.data[self.V1_data_label], 
+                                                                  self.data[self.I1_data_label], pen=pen ),
+            'V_{}_time'.format(self.V1_label): self.V1_time_plot.plot(self.data['time'],
+                                                                      self.data[self.I1_data_label], pen=pen ),
+            'V_{}_iv'.format(self.V2_label): self.V2_iv_plot.plot(self.data[self.V2_data_label],
+                                                                  self.data[self.I2_data_label], pen=pen ),
+            'V_{}_time'.format(self.V2_label): self.V2_time_plot.plot(self.data['time'],
+                                                                      self.data[self.I2_data_label], pen=pen ) }
         
     def update_plots(self):
-        self.active_plot_lines['V1_iv'].setData(self.data['measured_V1'], self.data['measured_I1'])
-        self.active_plot_lines['V1_time'].setData(self.data['time'], self.data['measured_I1'])
-        self.active_plot_lines['V2_iv'].setData(self.data['measured_V2'], self.data['measured_I2'])
-        self.active_plot_lines['V2_time'].setData(self.data['time'], self.data['measured_I2'])
+        self.active_plot_lines['V_{}_iv'.format(self.V1_label)].setData(self.data[self.V1_data_label],
+                                                                        self.data[self.I1_data_label] )
+        self.active_plot_lines['V_{}_time'.format(self.V1_label)].setData(self.data['time'], self.data[self.I1_data_label] )
+        self.active_plot_lines['V_{}_iv'.format(self.V2_label)].setData(self.data[self.V2_data_label],
+                                                                        self.data[self.I2_data_label] )
+        self.active_plot_lines['V_{}_time'.format(self.V2_label)].setData(self.data['time'], self.data[self.I2_data_label] )
         
             
     def shutdown(self):
