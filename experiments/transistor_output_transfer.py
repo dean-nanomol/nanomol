@@ -74,6 +74,8 @@ class transistor_output_transfer(interactive_ui):
             for self.V1_active in self.V1:
                 active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
                 self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
+                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
+                self.active_curve_group.attrs.create('timestamp', timestamp )
                 self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
                 self.active_curve_group.attrs.create('measurement_counter', data=self.measurement_counter)
                 # reset curve datasets for new curve
