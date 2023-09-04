@@ -31,7 +31,7 @@ class transistor_output_transfer(interactive_ui):
         self.transfer_mode_radiobutton.clicked.connect(self.set_measurement_mode)
         self.start_pushbutton.clicked.connect(self.start_measurement)
         self.stop_pushbutton.clicked.connect(self.stop_measurement)
-        self.reset_plot_widgets_pushbutton.clicked.connect(self.reset_plot_widgets)
+        self.reset_plot_widgets_pushbutton.clicked.connect(self.setup_plot_widgets)
         self.shutdown_pushbutton.clicked.connect(self.shutdown)
         self.sweep_one_way_radioButton.clicked.connect(self.set_sweep_loop)
         self.sweep_loop_radioButton.clicked.connect(self.set_sweep_loop)
@@ -41,15 +41,13 @@ class transistor_output_transfer(interactive_ui):
         self.sweep_direction_negative_radioButton.clicked.connect(self.set_sweep_direction)
         self.curve_direction_positive_radioButton.clicked.connect(self.set_curve_direction)
         self.curve_direction_negative_radioButton.clicked.connect(self.set_curve_direction)
-        self.plot_widgets_set_up = False  # flag to set plot labels only after measurement mode is first set
+        self.plot_widgets_set_up = False
         self.set_measurement_mode()
         self.setup_plot_widgets()
-        self.set_measurement_mode()
         self.set_sweep_direction()  # sweep is the external loop, V1
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
         self.set_curve_loop()
-        
         self.measurement_is_running = False  # flag to start and stop a measurement
     
     def start_measurement(self):
@@ -197,21 +195,22 @@ class transistor_output_transfer(interactive_ui):
             self.curve_loop = False
         elif self.curve_loop_radioButton.isChecked():
             self.curve_loop = True
-            
+        
     def setup_plot_widgets(self):
+        # plots occasionally freeze, use this to reset
+        self.plot_layout.removeWidget(self.I1_vs_V2)
+        self.plot_layout.removeWidget(self.I2_vs_V2)
+        self.I1_vs_V2.deleteLater()
+        self.I2_vs_V2.deleteLater()
+        self.I1_vs_V2 = None
+        self.I2_vs_V2 = None
         self.I2_vs_V2 = pg.PlotWidget()
         self.I1_vs_V2 = pg.PlotWidget()
-        self.plot_layout.replaceWidget(self.plot_placeholder_1, self.I2_vs_V2)
-        self.plot_layout.replaceWidget(self.plot_placeholder_2, self.I1_vs_V2)
+        self.plot_layout.addWidget(self.I2_vs_V2)
+        self.plot_layout.addWidget(self.I1_vs_V2)
         self.I2_vs_V2.setBackground('w')
         self.I1_vs_V2.setBackground('w')
         self.plot_widgets_set_up = True
-        
-    def reset_plot_widgets(self):
-        # plots occasionally freeze, use this to reset
-        self.plot_layout.replaceWidget(self.I2_vs_V2, self.plot_placeholder_1)
-        self.plot_layout.replaceWidget(self.I1_vs_V2, self.plot_placeholder_2)
-        self.setup_plot_widgets()
         self.set_plot_labels()
         
     def clear_plots(self):
