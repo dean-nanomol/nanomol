@@ -724,6 +724,26 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_9">
      <item>
+      <widget class="QLabel" name="label_20">
+       <property name="text">
+        <string>number of measurements</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="N_measurements_spinBox">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>99999</number>
+       </property>
+       <property name="value">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacer_10">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -813,7 +833,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QGridLayout" name="plot_layout">
+    <layout class="QGridLayout" name="plot_layout" columnstretch="5,5">
      <item row="0" column="1">
       <widget class="QWidget" name="plot_placeholder_2" native="true">
        <property name="sizePolicy">
@@ -837,11 +857,22 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="shut_down_pushbutton">
-     <property name="text">
-      <string>shut down</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,8">
+     <item>
+      <widget class="QPushButton" name="reset_plot_widgets_pushbutton">
+       <property name="text">
+        <string>reset plots</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="shutdown_pushbutton">
+       <property name="text">
+        <string>shut down</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>

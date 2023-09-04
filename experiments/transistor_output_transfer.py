@@ -31,6 +31,8 @@ class transistor_output_transfer(interactive_ui):
         self.transfer_mode_radiobutton.clicked.connect(self.set_measurement_mode)
         self.start_pushbutton.clicked.connect(self.start_measurement)
         self.stop_pushbutton.clicked.connect(self.stop_measurement)
+        self.reset_plot_widgets_pushbutton.clicked.connect(self.reset_plot_widgets)
+        self.shutdown_pushbutton.clicked.connect(self.shutdown)
         self.sweep_one_way_radioButton.clicked.connect(self.set_sweep_loop)
         self.sweep_loop_radioButton.clicked.connect(self.set_sweep_loop)
         self.curve_one_way_radioButton.clicked.connect(self.set_curve_loop)
@@ -62,46 +64,48 @@ class transistor_output_transfer(interactive_ui):
             
     def run_measurement(self):
         self.configure_measurement()
-        self.reset_plots()
+        self.clear_plots()
         # set channels to start from first point when output is turned on
         self.V1_active = self.V1[0]
         self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
         self.color_index = 0
         self.smu.set_output(self.V1_ch, 1)
-        for self.V1_active in self.V1:
-            active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
-            self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
-            self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
-            # reset curve datasets for new curve
-            self.initialise_datasets()
-            self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-            self.V2_active = self.V2[0]
-            self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-            # prepare new plot line for upcoming data
-            self.create_new_plot_lines()
-            self.color_index += 1
-            t0 = time.time()
-            self.smu.set_output(self.V2_ch, 1)
-            for self.V2_active in self.V2:
+        for self.measurement_counter in range(self.N_measurements):
+            for self.V1_active in self.V1:
+                active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
+                self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
+                self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
+                self.active_curve_group.attrs.create('measurement_counter', data=self.measurement_counter)
+                # reset curve datasets for new curve
+                self.initialise_datasets()
+                self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+                self.V2_active = self.V2[0]
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
-                measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
-                self.data['time'].append(time.time() - t0)
-                self.data[self.V1_data_label].append(measured_V1)
-                self.data[self.I1_data_label].append(measured_I1)
-                self.data[self.V2_data_label].append(measured_V2)
-                self.data[self.I2_data_label].append(measured_I2)
-                self.update_plots()
+                # prepare new plot line for upcoming data
+                self.create_new_plot_lines()
+                self.color_index += 1
+                t0 = time.time()
+                self.smu.set_output(self.V2_ch, 1)
+                for self.V2_active in self.V2:
+                    self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
+                    measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
+                    measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                    self.data['time'].append(time.time() - t0)
+                    self.data[self.V1_data_label].append(measured_V1)
+                    self.data[self.I1_data_label].append(measured_I1)
+                    self.data[self.V2_data_label].append(measured_V2)
+                    self.data[self.I2_data_label].append(measured_I2)
+                    self.update_plots()
+                    if not self.measurement_is_running:
+                        break
+                    if self.delay_points != 0:
+                        time.sleep(self.delay_points)
+                self.smu.set_output(self.V2_ch, 0)
+                self.save_data()
                 if not self.measurement_is_running:
                     break
-                if self.delay_points != 0:
-                    time.sleep(self.delay_points)
-            self.smu.set_output(self.V2_ch, 0)
-            self.save_data()
-            if not self.measurement_is_running:
-                break
-            if self.delay_curves != 0:
-                time.sleep(self.delay_curves)
+                if self.delay_curves != 0:
+                    time.sleep(self.delay_curves)
         self.smu.set_output(self.V1_ch, 0)
         self.measurement_is_running = False
             
@@ -201,7 +205,14 @@ class transistor_output_transfer(interactive_ui):
         self.I1_vs_V2.setBackground('w')
         self.plot_widgets_set_up = True
         
-    def reset_plots(self):
+    def reset_plot_widgets(self):
+        # plots occasionally freeze, use this to reset
+        self.plot_layout.replaceWidget(self.I2_vs_V2, self.plot_placeholder_1)
+        self.plot_layout.replaceWidget(self.I1_vs_V2, self.plot_placeholder_2)
+        self.setup_plot_widgets()
+        self.set_plot_labels()
+        
+    def clear_plots(self):
         self.I2_vs_V2.clear()
         self.I1_vs_V2.clear()
     
@@ -216,7 +227,7 @@ class transistor_output_transfer(interactive_ui):
         self.I1_vs_V2.addLegend()
         
     def create_new_plot_lines(self):
-        color = pg.intColor(self.color_index, hues=self.V1.size)
+        color = pg.intColor(self.color_index, hues=self.V1.size*self.N_measurements)
         pen = pg.mkPen(color=color)
         self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.V2_data_label], self.data[self.I2_data_label],
                                                 pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
