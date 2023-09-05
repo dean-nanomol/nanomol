@@ -6,7 +6,6 @@ Created on Wed Aug 16 14:47:39 2023
 """
 
 import os
-from functools import partial
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.visa_instrument import visa_instrument
 
