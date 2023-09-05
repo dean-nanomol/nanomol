@@ -17,6 +17,11 @@ from nanomol.utils.hdf5_datafile import hdf5_datafile
 from nanomol.utils.hdf5_viewer import hdf5_viewer
 
 class current_vs_time(interactive_ui):
+    """
+    Class to measure transistor output over time. Set V_GS and V_DS and start measurement.
+    Measurements always record time and measured V and I values for both channels.
+    Run measurement until the time limit, or set time limit to -1 to run indefinitely.
+    """
     
     def __init__(self, datafile, smu):
         super().__init__()
@@ -25,13 +30,10 @@ class current_vs_time(interactive_ui):
         ui_file_path = os.path.join(os.path.dirname(__file__), 'current_vs_time.ui')
         uic.loadUi(ui_file_path, self)
         self.connect_widgets_by_name()
-        self.channel_GS_comboBox.currentTextChanged.connect(self.set_smu_channels)
-        self.channel_DS_comboBox.currentTextChanged.connect(self.set_smu_channels)
         self.start_pushbutton.clicked.connect(self.start_measurement)
         self.stop_pushbutton.clicked.connect(self.stop_measurement)
         self.reset_plot_widgets_pushbutton.clicked.connect(self.setup_plot_widgets)
         self.shutdown_pushbutton.clicked.connect(self.shutdown)
-        self.set_smu_channels()
         self.setup_plot_widgets()
         self.measurement_is_running = False
         
@@ -52,7 +54,7 @@ class current_vs_time(interactive_ui):
         self.smu.set_source_level(self.ch_GS, 'v', self.V_GS)
         self.smu.set_source_level(self.ch_DS, 'v', self.V_DS)
         active_V_GS = self.V_GS
-        active_V_DS = self.V_GS
+        active_V_DS = self.V_DS
         t0 = time.time()
         t = 0
         self.smu.set_output(self.ch_GS, 1)
@@ -99,15 +101,13 @@ class current_vs_time(interactive_ui):
         self.active_group =  self.datafile.create_group(active_group)
         self.active_group.attrs.create('description', self.description)
         self.active_group.attrs.create('timestamp', self.timestamp)
+        self.active_group.attrs.create('channel_GS', self.ch_GS)
+        self.active_group.attrs.create('channel_DS', self.ch_DS)
         for key, value in self.smu.get_settings().items():
             self.active_group.attrs.create('keithley_{}'.format(key), value)
         for dataset_name, data in self.data.items():
             self.active_group.create_dataset(dataset_name, data=np.array(data) )
         self.datafile.flush()
-    
-    def set_smu_channels(self):
-        self.ch_GS = self.channel_GS_comboBox.currentText()
-        self.ch_DS = self.channel_DS_comboBox.currentText()
     
     def setup_plot_widgets(self):
         self.plot_layout.removeWidget(self.I_DS_vs_time)

@@ -17,6 +17,12 @@ from nanomol.utils.hdf5_datafile import hdf5_datafile
 from nanomol.utils.hdf5_viewer import hdf5_viewer
 
 class transistor_output_transfer(interactive_ui):
+    """
+    Class for measurement of transistor output and transfer curves.
+    "sweep" refers to the outer voltage loop, for example V_GS when measuring output curves.
+    "curve" refers to the inner voltage loop, for example V_DS when measuring output curves.
+    Measurements always record time and measured V and I values for both channels.
+    """
     
     def __init__(self, datafile, smu):
         super().__init__()
@@ -147,7 +153,7 @@ class transistor_output_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def initialise_datasets(self):
-        self.data = {'time':[],
+        self.data = {'time': [],
                      self.V1_data_label: [],
                      self.I1_data_label: [],
                      self.V2_data_label: [],

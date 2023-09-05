@@ -42,7 +42,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="channel_GS_comboBox">
+      <widget class="QComboBox" name="ch_GS_comboBox">
        <property name="currentIndex">
         <number>0</number>
        </property>
@@ -82,7 +82,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="channel_DS_comboBox">
+      <widget class="QComboBox" name="ch_DS_comboBox">
        <property name="currentIndex">
         <number>1</number>
        </property>
@@ -190,7 +190,7 @@
      <item>
       <widget class="QLabel" name="label_3">
        <property name="toolTip">
-        <string>set to 0 to run indefinitely</string>
+        <string>set to -1 to run indefinitely</string>
        </property>
        <property name="text">
         <string>time limit [s]</string>
@@ -199,6 +199,9 @@
      </item>
      <item>
       <widget class="QDoubleSpinBox" name="t_limit_doubleSpinBox">
+       <property name="toolTip">
+        <string>set to -1 to run indefinitely</string>
+       </property>
        <property name="minimum">
         <double>-1.000000000000000</double>
        </property>
