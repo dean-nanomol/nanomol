@@ -31,7 +31,6 @@ class transistor_output_transfer(interactive_ui):
         ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_output_transfer.ui')
         uic.loadUi(ui_file_path, self)
         # set gate-source and drain-source channels
-        self.smu_channels = {'GS': 'a', 'DS': 'b'}
         self.connect_widgets_by_name()
         self.output_mode_radiobutton.clicked.connect(self.set_measurement_mode)
         self.transfer_mode_radiobutton.clicked.connect(self.set_measurement_mode)
@@ -125,11 +124,11 @@ class transistor_output_transfer(interactive_ui):
         self.smu.set_source_function('a', 1)
         self.smu.set_source_function('b', 1)
         if self.measurement_mode == 'output':
-            self.V1_ch, self.V2_ch = self.smu_channels['GS'], self.smu_channels['DS']
+            self.V1_ch, self.V2_ch = self.ch_GS, self.ch_DS
             self.V1 = np.arange(self.V_GS_min_output, self.V_GS_max_output + self.V_GS_step_output, self.V_GS_step_output)
             self.V2 = np.arange(self.V_DS_min_output, self.V_DS_max_output + self.V_DS_step_output, self.V_DS_step_output)
         elif self.measurement_mode == 'transfer':
-            self.V1_ch, self.V2_ch = self.smu_channels['DS'], self.smu_channels['GS']
+            self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
             self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
             self.V2 = np.arange(self.V_GS_min_transfer, self.V_GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
         self.V1_data_label = 'measured_V_{}'.format(self.V1_label)
