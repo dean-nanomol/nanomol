@@ -213,6 +213,18 @@ class keithley_2600A(visa_instrument):
                     }
         return settings
 
+    def load_script(self, script, script_name=''):
+        """
+        script : list of str
+            List of commands making up the script. Each list item is one valid command.
+        script_name : str, optional
+            Name assigned to script in instrument runtime environment. If script_name='' set as anonymous script.
+        """
+        self.write('loadscript {}'.format(script_name))
+        for command in script:
+            self.write(command)
+        self.write('endscript')
+        
 
 class keithley_2600A_ui(QtWidgets.QWidget):
     """
