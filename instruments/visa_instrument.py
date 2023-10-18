@@ -14,7 +14,7 @@ class visa_instrument():
     address: str; instrument address obtained e.g. from pyvisa ResourceManager or NI MAX
     """
     
-    def __init__(self, address = '', remove_termination = True):
+    def __init__(self, address = None, remove_termination = True):
         self.remove_termination = remove_termination
         resource_manager = pyvisa.ResourceManager()
         self.instrument = resource_manager.open_resource(address)
