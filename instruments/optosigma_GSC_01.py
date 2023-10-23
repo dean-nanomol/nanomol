@@ -5,7 +5,13 @@ Created on Wed Oct 18 16:47:42 2023
 @author: deankos
 """
 
+import numpy as np
 from nanomol.instruments.serial_instrument import serial_instrument
+
+class GSC01_softLimitExceededError(Exception):
+    def __init__(self, target, limit_min, limit_max):
+        self.message = 'Target position {} exceeds soft limits: [{}, {}]'.format(target, limit_min, limit_max)
+        super().__init__(self.message)
 
 class optosigma_GSC_01(serial_instrument):
     
@@ -15,6 +21,8 @@ class optosigma_GSC_01(serial_instrument):
                     'timeout': 1 }
         termination = '\r\n'
         super().__init__(port=port, port_settings=settings, termination_character=termination)
+        self.soft_limit_min = -np.inf
+        self.soft_limit_max = np.inf
     
     def home(self):
         command_state = self.query('H:1')
@@ -25,26 +33,32 @@ class optosigma_GSC_01(serial_instrument):
         pulses : int
             Number of pulses to move by from current position, positive or negative.
         """
-        if pulses < 0:
-            command_state = self.query('M:1-P{}'.format(int(abs(pulses)) ) )
-        elif pulses > 0:
-            command_state = self.query('M:1+P{}'.format(int(pulses)) )
-        if command_state == 'OK':
-            command_state = self.query('G:')
-        return command_state
+        if self.soft_limit_min <= (self.position + pulses) <= self.soft_limit_max:
+            if pulses < 0:
+                command_state = self.query('M:1-P{}'.format(int(abs(pulses)) ) )
+            elif pulses > 0:
+                command_state = self.query('M:1+P{}'.format(int(pulses)) )
+            if command_state == 'OK':
+                command_state = self.query('G:')
+            return command_state
+        else:
+            raise GSC01_softLimitExceededError(self.position + pulses, self.soft_limit_min, self.soft_limit_max)      
     
     def move_absolute(self, position):
         """
         position : int
             Absolute position to move to, in number of pulses relative to current origin.
         """
-        if position < 0:
-            command_state = self.query('A:1-P{}'.format(int(abs(position)) ) )
-        elif position >= 0:
-            command_state = self.query('A:1+P{}'.format(int(position)) )
-        if command_state == 'OK':
-            command_state = self.query('G:')
-        return command_state
+        if self.soft_limit_min <= position <= self.soft_limit_max:
+            if position < 0:
+                command_state = self.query('A:1-P{}'.format(int(abs(position)) ) )
+            elif position >= 0:
+                command_state = self.query('A:1+P{}'.format(int(position)) )
+            if command_state == 'OK':
+                command_state = self.query('G:')
+            return command_state
+        else:
+            raise GSC01_softLimitExceededError(position, self.soft_limit_min, self.soft_limit_max)
     
     def jog(self, direction):
         """
@@ -87,6 +101,8 @@ class optosigma_GSC_01(serial_instrument):
     
     def origin(self):
         """ set current stage position as origin """
+        self.soft_limit_min += self.position
+        self.soft_limit_max += self.position
         command_state = self.query('R:1')
         return command_state
     
