@@ -23,6 +23,12 @@ class GSC01_LimitSensorTriggeredError(Exception):
         super().__init__(self.message)
 
 class optosigma_GSC_01(serial_instrument):
+    """
+    Class for OptoSigma GSC-01 stage controller. Motion is open loop through stepper motor, controller sends
+    pulses and keeps track of number of sent pulses. Stages have physical limit sensors and cannot move beyond
+    these limits. The class implements "soft limits" set by the user, move commands (EXCEPT jog) check these
+    limits are not exceeded before moving.
+    """
     
     def __init__(self, port):
         settings = {'baudrate': 9600,
@@ -35,6 +41,7 @@ class optosigma_GSC_01(serial_instrument):
         self.query_interval = 0.05
     
     def home(self):
+        """ Return to home position near negative limit sensor. """
         command_state = self.query('H:1')
         return command_state
         
@@ -160,6 +167,7 @@ class optosigma_GSC_01(serial_instrument):
             return False
         
     def limit_sensor_triggered(self):
+        """ Returns True if stage has stopped by triggering a limit sensor, False otherwise """
         device_state = self.state()
         limit_sensor_state = device_state.split(',', 2)[1]
         if limit_sensor_state == 'L':
@@ -178,8 +186,9 @@ class optosigma_GSC_01_ui(interactive_ui):
         ui_file_path = os.path.join(os.path.dirname(__file__), 'optosigma_GSC_01.ui')
         uic.loadUi(ui_file_path, self)
         self.connect_widgets_by_name()
+        self.device_state_pushButton.clicked.connect(self.show_state)
         self.update_position_pushButton.clicked.connect(self.update_position)
-        self.home_pushButton.clicked.connect(self.home)
+        self.move_to_pushButton.clicked.connect(self.move_to)
         self.move_relative_positive_pushButton.clicked.connect(self.move_relative)
         self.move_relative_negative_pushButton.clicked.connect(self.move_relative)
         self.jog_positive_pushButton.pressed.connect(self.jog_start)
@@ -188,6 +197,12 @@ class optosigma_GSC_01_ui(interactive_ui):
         self.jog_negative_pushButton.released.connect(self.jog_stop)
         self.jog_speed_comboBox.currentTextChanged.connect(self.set_jog_speed)
         self.custom_jog_speed_spinBox.valueChanged.connect(self.set_jog_speed)
+        self.set_current_soft_min_pushButton.clicked.connect(self.set_soft_limit)
+        self.set_current_soft_max_pushButton.clicked.connect(self.set_soft_limit)
+        self.soft_limit_min_spinBox.valueChanged.connect(self.set_soft_limit)
+        self.soft_limit_max_spinBox.valueChanged.connect(self.set_soft_limit)
+        self.origin_pushButton.clicked.connect(self.origin)
+        self.home_pushButton.clicked.connect(self.home)
         self.update_position()
         self.set_jog_speed()
         
@@ -224,10 +239,30 @@ class optosigma_GSC_01_ui(interactive_ui):
         self.GSC01.stop()
         self.update_position()
         
+    def set_soft_limit(self):
+        if self.sender() == self.set_current_soft_min_pushButton:
+            self.GSC01.soft_limit_min = self.GSC01.position
+            self.soft_limit_min_spinBox.setValue(self.GSC01.soft_limit_min)
+        elif self.sender() == self.set_current_soft_max_pushButton:
+            self.GSC01.soft_limit_max = self.GSC01.position
+            self.soft_limit_max_spinBox.setValue(self.GSC01.soft_limit_max)
+        elif self.sender() == self.soft_limit_min_spinBox:
+            self.GSC01.soft_limit_min = self.soft_limit_min
+        elif self.sender() == self.soft_limit_max_spinBox:
+            self.GSC01.soft_limit_max = self.soft_limit_max
+    
+    def show_state(self):
+        state = self.GSC01.state()
+        state += '; soft limits [{},{}]'.format(self.GSC01.soft_limit_min, self.GSC01.soft_limit_max)
+        state += '; position: {}'.format(self.GSC01.position)
+        self.device_state_lineEdit.setText(state)
+        
+    def origin(self):
+        self.GSC01.origin()
+        self.update_position()
+        
     def home(self):
         self.GSC01.home()
-        
-    
         
 if __name__ == '__main__' :
     
