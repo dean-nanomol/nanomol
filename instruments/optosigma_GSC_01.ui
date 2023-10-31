@@ -545,7 +545,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="soft_limit_min_spinBox">
+         <widget class="QSpinBox" name="software_limit_min_spinBox">
           <property name="minimum">
            <number>-16777215</number>
           </property>
@@ -581,7 +581,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="soft_limit_max_spinBox">
+         <widget class="QSpinBox" name="software_limit_max_spinBox">
           <property name="minimum">
            <number>-16777215</number>
           </property>
@@ -611,14 +611,14 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_7">
         <item>
-         <widget class="QPushButton" name="set_current_soft_min_pushButton">
+         <widget class="QPushButton" name="set_current_software_min_pushButton">
           <property name="text">
            <string>current position as min</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="set_current_soft_max_pushButton">
+         <widget class="QPushButton" name="set_current_software_max_pushButton">
           <property name="text">
            <string>current position as max</string>
           </property>

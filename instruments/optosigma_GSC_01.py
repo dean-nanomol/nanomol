@@ -36,8 +36,8 @@ class optosigma_GSC_01(serial_instrument):
                     'timeout': 1 }
         termination = '\r\n'
         super().__init__(port=port, port_settings=settings, termination_character=termination)
-        self.soft_limit_min = -np.inf
-        self.soft_limit_max = np.inf
+        self.software_limit_min = -np.inf
+        self.software_limit_max = np.inf
         self.query_interval = 0.05
     
     def home(self):
@@ -50,7 +50,7 @@ class optosigma_GSC_01(serial_instrument):
         pulses : int
             Number of pulses to move by from current position, positive or negative.
         """
-        if self.soft_limit_min <= (self.position + pulses) <= self.soft_limit_max:
+        if self.software_limit_min <= (self.position + pulses) <= self.software_limit_max:
             if pulses < 0:
                 command_state = self.query('M:1-P{}'.format(int(abs(pulses)) ) )
             elif pulses > 0:
@@ -63,14 +63,14 @@ class optosigma_GSC_01(serial_instrument):
                 if self.limit_sensor_triggered():
                     raise GSC01_LimitSensorTriggeredError()
         else:
-            raise GSC01_SoftLimitExceededError(self.position + pulses, self.soft_limit_min, self.soft_limit_max)      
+            raise GSC01_SoftLimitExceededError(self.position + pulses, self.software_limit_min, self.software_limit_max)      
     
     def move_absolute(self, position):
         """
         position : int
             Absolute position to move to, in number of pulses relative to current origin.
         """
-        if self.soft_limit_min <= position <= self.soft_limit_max:
+        if self.software_limit_min <= position <= self.software_limit_max:
             if position < 0:
                 command_state = self.query('A:1-P{}'.format(int(abs(position)) ) )
             elif position >= 0:
@@ -83,7 +83,7 @@ class optosigma_GSC_01(serial_instrument):
                 if self.limit_sensor_triggered():
                     raise GSC01_LimitSensorTriggeredError()
         else:
-            raise GSC01_SoftLimitExceededError(position, self.soft_limit_min, self.soft_limit_max)
+            raise GSC01_SoftLimitExceededError(position, self.software_limit_min, self.software_limit_max)
     
     def jog(self, direction):
         """
@@ -136,8 +136,8 @@ class optosigma_GSC_01(serial_instrument):
     
     def origin(self):
         """ set current stage position as origin """
-        self.soft_limit_min += self.position
-        self.soft_limit_max += self.position
+        self.software_limit_min += self.position
+        self.software_limit_max += self.position
         command_state = self.query('R:1')
         return command_state
     
@@ -197,10 +197,10 @@ class optosigma_GSC_01_ui(interactive_ui):
         self.jog_negative_pushButton.released.connect(self.jog_stop)
         self.jog_speed_comboBox.currentTextChanged.connect(self.set_jog_speed)
         self.custom_jog_speed_spinBox.valueChanged.connect(self.set_jog_speed)
-        self.set_current_soft_min_pushButton.clicked.connect(self.set_soft_limit)
-        self.set_current_soft_max_pushButton.clicked.connect(self.set_soft_limit)
-        self.soft_limit_min_spinBox.valueChanged.connect(self.set_soft_limit)
-        self.soft_limit_max_spinBox.valueChanged.connect(self.set_soft_limit)
+        self.set_current_software_min_pushButton.clicked.connect(self.set_soft_limit)
+        self.set_current_software_max_pushButton.clicked.connect(self.set_soft_limit)
+        self.software_limit_min_spinBox.valueChanged.connect(self.set_soft_limit)
+        self.software_limit_max_spinBox.valueChanged.connect(self.set_soft_limit)
         self.origin_pushButton.clicked.connect(self.origin)
         self.home_pushButton.clicked.connect(self.home)
         self.update_position()
@@ -241,19 +241,19 @@ class optosigma_GSC_01_ui(interactive_ui):
         
     def set_soft_limit(self):
         if self.sender() == self.set_current_soft_min_pushButton:
-            self.GSC01.soft_limit_min = self.GSC01.position
-            self.soft_limit_min_spinBox.setValue(self.GSC01.soft_limit_min)
+            self.GSC01.software_limit_min = self.GSC01.position
+            self.software_limit_min_spinBox.setValue(self.GSC01.software_limit_min)
         elif self.sender() == self.set_current_soft_max_pushButton:
-            self.GSC01.soft_limit_max = self.GSC01.position
-            self.soft_limit_max_spinBox.setValue(self.GSC01.soft_limit_max)
-        elif self.sender() == self.soft_limit_min_spinBox:
-            self.GSC01.soft_limit_min = self.soft_limit_min
-        elif self.sender() == self.soft_limit_max_spinBox:
-            self.GSC01.soft_limit_max = self.soft_limit_max
+            self.GSC01.software_limit_max = self.GSC01.position
+            self.software_limit_max_spinBox.setValue(self.GSC01.software_limit_max)
+        elif self.sender() == self.software_limit_min_spinBox:
+            self.GSC01.software_limit_min = self.software_limit_min
+        elif self.sender() == self.software_limit_max_spinBox:
+            self.GSC01.software_limit_max = self.software_limit_max
     
     def show_state(self):
         state = self.GSC01.state()
-        state += '; soft limits [{},{}]'.format(self.GSC01.soft_limit_min, self.GSC01.soft_limit_max)
+        state += '; soft limits [{},{}]'.format(self.GSC01.software_limit_min, self.GSC01.software_limit_max)
         state += '; position: {}'.format(self.GSC01.position)
         self.device_state_lineEdit.setText(state)
         
