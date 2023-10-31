@@ -42,6 +42,10 @@ class serial_instrument():
         self.write(command)
         return self.read()
     
+    def reset_input_buffer(self):
+        """ clear input buffer, discarding contents """ 
+        self.instrument.reset_input_buffer()
+    
     def close(self):
         self.instrument.close()
         
