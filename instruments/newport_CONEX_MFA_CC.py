@@ -91,12 +91,22 @@ class newport_CONEX_MFA_CC(serial_instrument):
         """ reset controller, equivalent to power cycling """
         self.write('1rs')
 
-
+class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
+    """
+    User interface for 2 axes CONEX-MFA-CC.
+    """
+    def __init__(self, stage_X, stage_Y):
+        super().__init__()
+        self.stage_X = stage_X
+        self.stage_Y = stage_Y
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'newport_CONEX_MFA_CC_XY_ui')
+        uic.loadUi(ui_file_path, self)
+        self.connect_widgets_by_name()
     
         
 if __name__ == '__main__' :
     
-    myMFACC = newport_CONEX_MFA_CC('COM3')
+    myMFACC = newport_CONEX_MFA_CC('COM4')
     
     # ui_app = QtWidgets.QApplication([])
     # ui = optosigma_GSC_01_ui(myGSC01)
