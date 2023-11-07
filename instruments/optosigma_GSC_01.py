@@ -177,7 +177,7 @@ class optosigma_GSC_01(serial_instrument):
 
 class optosigma_GSC_01_ui(interactive_ui):
     """
-    User interface OptoSigma GSC-01 controller.
+    User interface for OptoSigma GSC-01 controller.
     """
     
     def __init__(self, GSC01):
