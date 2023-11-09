@@ -50,7 +50,9 @@ class newport_CONEX_MFA_CC(serial_instrument):
     
     @property
     def position(self):
-        return self.query('1tp')
+        position_str = self.query('1tp')
+        position = position_str.split('TP', 1)[1]
+        return float(position)
     
     @property
     def state(self):
