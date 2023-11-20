@@ -101,16 +101,73 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         super().__init__()
         self.stage_X = stage_X
         self.stage_Y = stage_Y
-        ui_file_path = os.path.join(os.path.dirname(__file__), 'newport_CONEX_MFA_CC_XY_ui')
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'newport_CONEX_MFA_CC_XY.ui')
         uic.loadUi(ui_file_path, self)
         self.connect_widgets_by_name()
+        self.move_relative_neg_X_pushButton.clicked.connect(self.move_relative_X)
+        self.move_relative_pos_X_pushButton.clicked.connect(self.move_relative_X)
+        self.move_relative_neg_Y_pushButton.clicked.connect(self.move_relative_Y)
+        self.move_relative_pos_Y_pushButton.clicked.connect(self.move_relative_Y)
+        self.move_absolute_X_pushButton.clicked.connect(self.move_absolute)
+        self.move_absolute_Y_pushButton.clicked.connect(self.move_absolute)
+        self.home_X_pushButton.clicked.connect(self.home_X)
+        self.home_Y_pushButton.clicked.connect(self.home_Y)
+        self.reset_X_pushButton.clicked.connect(self.reset_X)
+        self.reset_Y_pushButton.clicked.connect(self.reset_Y)
+    
+    def move_absolute(self):
+        if self.sender() == self.move_absolute_X_pushButton:
+            self.stage_X.move_absolute(self.move_absolute_position_X)
+        elif self.sender() == self.move_absolute_Y_pushButton:
+            self.stage_Y.move_absolute(self.move_absolute_position_Y)
+    
+    def move_relative_X(self):
+        if self.sender() == self.move_relative_neg_X_pushButton:
+            direction = -1
+        elif self.sender() == self.move_relative_pos_X_pushButton:
+            direction = 1
+        if self.custom_step_X_checkBox.isChecked():
+            step = float(self.move_relative_custom_step_X)
+        else:
+            step = float(self.move_relative_step_X)
+        self.stage_X.move_relative(step * direction)
+    
+    def move_relative_Y(self):
+        if self.sender() == self.move_relative_neg_Y_pushButton:
+            direction = -1
+        elif self.sender() == self.move_relative_pos_Y_pushButton:
+            direction = 1
+        if self.custom_step_Y_checkBox.isChecked():
+            step = float(self.move_relative_custom_step_Y)
+        else:
+            step = float(self.move_relative_step_Y)
+        self.stage_Y.move_relative(step * direction)
+    
+    def update_position(self):
+        position_X = self.stage_X.position
+        position_Y = self.stage_Y.position
+        self.position_X_lineEdit.setText('{:.6f}'.format(position_X))
+        self.position_Y_lineEdit.setText('{:.6f}'.format(position_Y))
+            
+    def home_X(self):
+        self.stage_X.home()
+        
+    def home_Y(self):
+        self.stage_Y.home()
+        
+    def reset_X(self):
+        self.stage_X.reset()
+        
+    def reset_Y(self):
+        self.stage_Y.reset()
     
         
 if __name__ == '__main__' :
     
-    myMFACC = newport_CONEX_MFA_CC('COM4')
+    myMFACC_X = newport_CONEX_MFA_CC('COM3')
+    myMFACC_Y = newport_CONEX_MFA_CC('COM4')
     
-    # ui_app = QtWidgets.QApplication([])
-    # ui = optosigma_GSC_01_ui(myGSC01)
-    # ui.show()
-    # ui_app.exec()
+    ui_app = QtWidgets.QApplication([])
+    ui = newport_CONEX_MFA_CC_XY_ui(myMFACC_X, myMFACC_Y)
+    ui.show()
+    ui_app.exec()

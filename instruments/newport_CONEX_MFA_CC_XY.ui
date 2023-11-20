@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>639</width>
-    <height>555</height>
+    <width>452</width>
+    <height>357</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,42 +21,36 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_11">
          <item>
-          <widget class="QLabel" name="label_8">
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="state_X_pushButton">
            <property name="text">
             <string>state X</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit_4"/>
+          <widget class="QLineEdit" name="state_X_lineEdit">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_5">
+          <widget class="QPushButton" name="state_Y_pushButton">
            <property name="text">
             <string>state Y</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit_3"/>
+          <widget class="QLineEdit" name="state_Y_lineEdit">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -73,12 +67,45 @@
           <item>
            <widget class="QLabel" name="label_9">
             <property name="text">
-             <string>TextLabel</string>
+             <string>X- [mm]</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_5"/>
+           <widget class="QDoubleSpinBox" name="software_limit_min_X_doubleSpinBox">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>25.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>X+ [mm]</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="software_limit_max_X_doubleSpinBox">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>25.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="value">
+             <double>25.000000000000000</double>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -87,12 +114,45 @@
           <item>
            <widget class="QLabel" name="label_10">
             <property name="text">
-             <string>TextLabel</string>
+             <string>Y- [mm]</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_6"/>
+           <widget class="QDoubleSpinBox" name="software_limit_min_Y_doubleSpinBox">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>25.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Y+ [mm]</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="software_limit_max_Y_doubleSpinBox">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>25.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="value">
+             <double>25.000000000000000</double>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -106,7 +166,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_3">
        <property name="title">
-        <string>position</string>
+        <string>current position</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
@@ -114,12 +174,16 @@
           <item>
            <widget class="QLabel" name="label">
             <property name="text">
-             <string>X</string>
+             <string>X [mm]</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit"/>
+           <widget class="QLineEdit" name="position_X_lineEdit">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -128,12 +192,16 @@
           <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>Y</string>
+             <string>Y [mm]</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_2"/>
+           <widget class="QLineEdit" name="position_Y_lineEdit">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -156,7 +224,10 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="doubleSpinBox">
+           <widget class="QDoubleSpinBox" name="move_absolute_position_X_doubleSpinBox">
+            <property name="showGroupSeparator" stdset="0">
+             <bool>true</bool>
+            </property>
             <property name="decimals">
              <number>6</number>
             </property>
@@ -166,7 +237,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_3">
+           <widget class="QPushButton" name="move_absolute_X_pushButton">
             <property name="text">
              <string>move X</string>
             </property>
@@ -184,14 +255,20 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+           <widget class="QDoubleSpinBox" name="move_absolute_position_Y_doubleSpinBox">
+            <property name="showGroupSeparator" stdset="0">
+             <bool>true</bool>
+            </property>
             <property name="decimals">
              <number>6</number>
+            </property>
+            <property name="maximum">
+             <double>25.000000000000000</double>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_4">
+           <widget class="QPushButton" name="move_absolute_Y_pushButton">
             <property name="text">
              <string>move Y</string>
             </property>
@@ -215,15 +292,49 @@
         <item>
          <widget class="QLabel" name="label_5">
           <property name="text">
-           <string>X</string>
+           <string>X [mm]</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox"/>
+         <widget class="QComboBox" name="move_relative_step_X_comboBox">
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <item>
+           <property name="text">
+            <string>10</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.01</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.001</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.0001</string>
+           </property>
+          </item>
+         </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="custom_step_X_checkBox">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
           </property>
@@ -233,24 +344,27 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+         <widget class="QDoubleSpinBox" name="move_relative_custom_step_X_doubleSpinBox">
           <property name="decimals">
            <number>6</number>
           </property>
           <property name="maximum">
            <double>25.000000000000000</double>
           </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_6">
+         <widget class="QPushButton" name="move_relative_neg_X_pushButton">
           <property name="text">
            <string>X-</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_7">
+         <widget class="QPushButton" name="move_relative_pos_X_pushButton">
           <property name="text">
            <string>X+</string>
           </property>
@@ -263,15 +377,49 @@
         <item>
          <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>Y</string>
+           <string>Y [mm]</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBox_2"/>
+         <widget class="QComboBox" name="move_relative_step_Y_comboBox">
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <item>
+           <property name="text">
+            <string>10</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.01</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.001</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>0.0001</string>
+           </property>
+          </item>
+         </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBox_2">
+         <widget class="QCheckBox" name="custom_step_Y_checkBox">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
           </property>
@@ -281,24 +429,27 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+         <widget class="QDoubleSpinBox" name="move_relative_custom_step_Y_doubleSpinBox">
           <property name="decimals">
            <number>6</number>
           </property>
           <property name="maximum">
            <double>25.000000000000000</double>
           </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_8">
+         <widget class="QPushButton" name="move_relative_neg_Y_pushButton">
           <property name="text">
            <string>Y-</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_9">
+         <widget class="QPushButton" name="move_relative_pos_Y_pushButton">
           <property name="text">
            <string>Y+</string>
           </property>
@@ -310,18 +461,40 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="pushButton_10">
-     <property name="text">
-      <string>home</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_13">
+     <item>
+      <widget class="QPushButton" name="home_X_pushButton">
+       <property name="text">
+        <string>home X</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="home_Y_pushButton">
+       <property name="text">
+        <string>home Y</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="pushButton_2">
-     <property name="text">
-      <string>reset</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_14">
+     <item>
+      <widget class="QPushButton" name="reset_X_pushButton">
+       <property name="text">
+        <string>reset X</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="reset_Y_pushButton">
+       <property name="text">
+        <string>reset Y</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
