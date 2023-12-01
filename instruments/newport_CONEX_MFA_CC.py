@@ -8,6 +8,7 @@ Created on Mon Oct 30 15:30:07 2023
 import numpy as np
 import os
 import time
+import threading
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.serial_instrument import serial_instrument
 from nanomol.utils.interactive_ui import interactive_ui
@@ -104,6 +105,8 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         ui_file_path = os.path.join(os.path.dirname(__file__), 'newport_CONEX_MFA_CC_XY.ui')
         uic.loadUi(ui_file_path, self)
         self.connect_widgets_by_name()
+        self.state_X_pushButton.clicked.connect(self.state_X_update)
+        self.state_Y_pushButton.clicked.connect(self.state_Y_update)
         self.move_relative_neg_X_pushButton.clicked.connect(self.move_relative_X)
         self.move_relative_pos_X_pushButton.clicked.connect(self.move_relative_X)
         self.move_relative_neg_Y_pushButton.clicked.connect(self.move_relative_Y)
@@ -114,6 +117,14 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         self.home_Y_pushButton.clicked.connect(self.home_Y)
         self.reset_X_pushButton.clicked.connect(self.reset_X)
         self.reset_Y_pushButton.clicked.connect(self.reset_Y)
+        
+    def state_X_update(self):
+        state = self.stage_X.state
+        self.state_X_lineEdit.setText(state)
+    
+    def state_Y_update(self):
+        state = self.stage_Y.state
+        self.state_Y_lineEdit.setText(state)
     
     def move_absolute(self):
         if self.sender() == self.move_absolute_X_pushButton:
@@ -131,6 +142,10 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         else:
             step = float(self.move_relative_step_X)
         self.stage_X.move_relative(step * direction)
+        motion_time = self.stage_X.time_for_move_relative(step)
+        self.stage_X.move_relative(step * direction)
+        motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_X, motion_time))
+        motion_thread.start()
     
     def move_relative_Y(self):
         if self.sender() == self.move_relative_neg_Y_pushButton:
@@ -141,13 +156,27 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
             step = float(self.move_relative_custom_step_Y)
         else:
             step = float(self.move_relative_step_Y)
+        motion_time = self.stage_Y.time_for_move_relative(step)
         self.stage_Y.move_relative(step * direction)
-    
+        motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_Y, motion_time))
+        motion_thread.start()
+                                    
+        
+    def wait_for_motion_completed(self, stage, motion_time):
+        time.sleep(motion_time)
+        if stage == self.stage_X:
+            self.stage_X.is_moving = False
+        elif stage == self.stage_Y:
+            self.stage_Y.is_moving = False
+        self.update_position()
+        
     def update_position(self):
         position_X = self.stage_X.position
         position_Y = self.stage_Y.position
         self.position_X_lineEdit.setText('{:.6f}'.format(position_X))
         self.position_Y_lineEdit.setText('{:.6f}'.format(position_Y))
+        
+    # TODO: update position after motion completed for abs motion. 
             
     def home_X(self):
         self.stage_X.home()

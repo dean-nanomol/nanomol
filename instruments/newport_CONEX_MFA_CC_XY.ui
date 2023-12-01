@@ -470,9 +470,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="home_Y_pushButton">
+      <widget class="QPushButton" name="reset_X_pushButton">
        <property name="text">
-        <string>home Y</string>
+        <string>reset X</string>
        </property>
       </widget>
      </item>
@@ -481,9 +481,9 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_14">
      <item>
-      <widget class="QPushButton" name="reset_X_pushButton">
+      <widget class="QPushButton" name="home_Y_pushButton">
        <property name="text">
-        <string>reset X</string>
+        <string>home Y</string>
        </property>
       </widget>
      </item>
