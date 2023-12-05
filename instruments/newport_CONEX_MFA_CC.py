@@ -48,13 +48,18 @@ class newport_CONEX_MFA_CC(serial_instrument):
         time = time_to_parse.split('PT', 1)[1]
         return float(time)
     
-    @property
     def position(self):
         position_str = self.query('1tp')
         position = position_str.split('TP', 1)[1]
         return float(position)
     
-    @property
+    def is_moving(self):
+        state = self.state()[-2:]
+        if state == '28':
+            return True
+        else:
+            return False
+    
     def state(self):
         return self.query('1ts')
     
@@ -70,7 +75,7 @@ class newport_CONEX_MFA_CC(serial_instrument):
         return self.query('1sr?')
     @software_limit_max.setter
     def software_limit_max(self, software_limit_max):
-        self.write('1sr{:.6f}'.format(software_limit_max))
+        self.write('1sr{:.6f}'.format(software_limit_max))   
     
     def home(self):
         return self.write('1or')
@@ -106,7 +111,7 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         self.connect_widgets_by_name()
         self.state_X_pushButton.clicked.connect(self.state_X_update)
         self.state_Y_pushButton.clicked.connect(self.state_Y_update)
-        self.update_position_pushButton.clicked.connect(self.update_position)
+        self.update_positions_pushButton.clicked.connect(self.update_positions)
         self.move_relative_neg_X_pushButton.clicked.connect(self.move_relative_X)
         self.move_relative_pos_X_pushButton.clicked.connect(self.move_relative_X)
         self.move_relative_neg_Y_pushButton.clicked.connect(self.move_relative_Y)
@@ -117,35 +122,27 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         self.home_Y_pushButton.clicked.connect(self.home_Y)
         self.reset_X_pushButton.clicked.connect(self.reset_X)
         self.reset_Y_pushButton.clicked.connect(self.reset_Y)
-        self.stage_X.is_moving = False
-        self.stage_Y.is_moving = False
         
     def state_X_update(self):
-        state = self.stage_X.state
+        state = self.stage_X.state()
         self.state_X_lineEdit.setText(state)
     
     def state_Y_update(self):
-        state = self.stage_Y.state
+        state = self.stage_Y.state()
         self.state_Y_lineEdit.setText(state)
     
     def move_absolute(self):
-        if self.sender() == self.move_absolute_X_pushButton and not self.stage_X.is_moving:
-            position = self.stage_X.position
-            step = abs(self.move_absolute_position_X - position)
-            motion_time = self.stage_X.time_for_move_relative(step)
+        if self.sender() == self.move_absolute_X_pushButton and not self.stage_X.is_moving():
             self.stage_X.move_absolute(self.move_absolute_position_X)
-            self.stage_X.is_moving = True
-            self.wait_for_motion_completed(self.stage_X, motion_time)
-        elif self.sender() == self.move_absolute_Y_pushButton and not self.stage_Y.is_moving:
-            position = self.stage_Y.position
-            step = abs(self.move_absolute_position_Y - position)
-            motion_time = self.stage_X.time_for_move_relative(step)
+            motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_X,) )
+            motion_thread.start()
+        elif self.sender() == self.move_absolute_Y_pushButton and not self.stage_Y.is_moving():
             self.stage_Y.move_absolute(self.move_absolute_position_Y)
-            self.stage_Y.is_moving = True
-            self.wait_for_motion_completed(self.stage_Y, motion_time)
+            motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_Y,) )
+            motion_thread.start()
     
     def move_relative_X(self):
-        if not self.stage_X.is_moving:
+        if not self.stage_X.is_moving():
             if self.sender() == self.move_relative_neg_X_pushButton:
                 direction = -1
             elif self.sender() == self.move_relative_pos_X_pushButton:
@@ -155,14 +152,12 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
             else:
                 step = float(self.move_relative_step_X)
             self.stage_X.move_relative(step * direction)
-            motion_time = self.stage_X.time_for_move_relative(step)
             self.stage_X.move_relative(step * direction)
-            self.stage_X.is_moving = True
-            motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_X, motion_time))
+            motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_X,) )
             motion_thread.start()
     
     def move_relative_Y(self):
-        if not self.stage_Y.is_moving:
+        if not self.stage_Y.is_moving():
             if self.sender() == self.move_relative_neg_Y_pushButton:
                 direction = -1
             elif self.sender() == self.move_relative_pos_Y_pushButton:
@@ -171,25 +166,26 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
                 step = float(self.move_relative_custom_step_Y)
             else:
                 step = float(self.move_relative_step_Y)
-            motion_time = self.stage_Y.time_for_move_relative(step)
             self.stage_Y.move_relative(step * direction)
-            self.stage_Y.is_moving = True
-            motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_Y, motion_time))
+            motion_thread = threading.Thread(target=self.wait_for_motion_completed, args=(self.stage_Y,) )
             motion_thread.start()
                                     
-    def wait_for_motion_completed(self, stage, motion_time):
-        time.sleep(motion_time)
-        if stage == self.stage_X:
-            self.stage_X.is_moving = False
-        elif stage == self.stage_Y:
-            self.stage_Y.is_moving = False
-        self.update_position()
+    def wait_for_motion_completed(self, stage):
+        # called within a thread to avoid blocking gui during motion, update position when finished
+        while stage.is_moving():
+            time.sleep(0.05)
+        self.update_position(stage)
         
-    def update_position(self):
-        position_X = self.stage_X.position
-        position_Y = self.stage_Y.position
-        self.position_X_lineEdit.setText('{:.6f}'.format(position_X))
-        self.position_Y_lineEdit.setText('{:.6f}'.format(position_Y))
+    def update_position(self, stage):
+        position = stage.position()
+        if stage == self.stage_X:
+            self.position_X_lineEdit.setText('{:.6f}'.format(position))
+        elif stage == self.stage_Y:
+            self.position_Y_lineEdit.setText('{:.6f}'.format(position))
+    
+    def update_positions(self):
+        self.position_X_lineEdit.setText('{:.6f}'.format(self.stage_X.position()) )
+        self.position_Y_lineEdit.setText('{:.6f}'.format(self.stage_Y.position()) )
             
     def home_X(self):
         self.stage_X.home()
