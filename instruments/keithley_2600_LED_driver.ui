@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>209</width>
-    <height>188</height>
+    <width>239</width>
+    <height>214</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -77,9 +77,9 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QRadioButton" name="radioButton">
+         <widget class="QRadioButton" name="constant_current_radioButton">
           <property name="text">
-           <string>set current [mA]</string>
+           <string>constant current [mA]</string>
           </property>
           <property name="checked">
            <bool>true</bool>
@@ -87,7 +87,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="I_set_doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="I_constant_current_doubleSpinBox">
           <property name="decimals">
            <number>2</number>
           </property>
@@ -104,14 +104,14 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
-         <widget class="QRadioButton" name="radioButton_2">
+         <widget class="QRadioButton" name="constant_voltage_radioButton">
           <property name="text">
-           <string>set voltage [V]</string>
+           <string>constant voltage [V]</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="V_set_doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="V_constant_voltage_doubleSpinBox">
           <property name="decimals">
            <number>4</number>
           </property>
