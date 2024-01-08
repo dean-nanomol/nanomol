@@ -6,28 +6,34 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>270</width>
-    <height>314</height>
+    <width>211</width>
+    <height>215</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>LED Keithley</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>3</number>
+   </property>
    <property name="leftMargin">
-    <number>6</number>
+    <number>3</number>
    </property>
    <property name="topMargin">
-    <number>6</number>
+    <number>3</number>
    </property>
    <property name="rightMargin">
-    <number>6</number>
+    <number>3</number>
    </property>
    <property name="bottomMargin">
-    <number>6</number>
+    <number>3</number>
    </property>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>3</number>
+     </property>
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
@@ -49,6 +55,9 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <property name="spacing">
+      <number>3</number>
+     </property>
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -73,60 +82,67 @@
      <property name="title">
       <string>source type</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
-        <item>
-         <widget class="QRadioButton" name="constant_current_radioButton">
-          <property name="text">
-           <string>constant current [mA]</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QDoubleSpinBox" name="I_constant_current_doubleSpinBox">
-          <property name="decimals">
-           <number>2</number>
-          </property>
-          <property name="maximum">
-           <double>1500.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-         </widget>
-        </item>
-       </layout>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <property name="leftMargin">
+       <number>3</number>
+      </property>
+      <property name="topMargin">
+       <number>3</number>
+      </property>
+      <property name="rightMargin">
+       <number>3</number>
+      </property>
+      <property name="bottomMargin">
+       <number>3</number>
+      </property>
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <item row="0" column="1">
+       <widget class="QDoubleSpinBox" name="I_constant_current_doubleSpinBox">
+        <property name="decimals">
+         <number>2</number>
+        </property>
+        <property name="maximum">
+         <double>1500.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+       </widget>
       </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
-        <item>
-         <widget class="QRadioButton" name="constant_voltage_radioButton">
-          <property name="text">
-           <string>constant voltage [V]</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QDoubleSpinBox" name="V_constant_voltage_doubleSpinBox">
-          <property name="decimals">
-           <number>4</number>
-          </property>
-          <property name="minimum">
-           <double>-20.000000000000000</double>
-          </property>
-          <property name="maximum">
-           <double>20.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-         </widget>
-        </item>
-       </layout>
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="constant_current_radioButton">
+        <property name="text">
+         <string>constant current [mA]</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="constant_voltage_radioButton">
+        <property name="text">
+         <string>constant voltage [V]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QDoubleSpinBox" name="V_constant_voltage_doubleSpinBox">
+        <property name="decimals">
+         <number>4</number>
+        </property>
+        <property name="minimum">
+         <double>-20.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>20.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -136,48 +152,58 @@
      <property name="title">
       <string>output</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_6">
-        <item>
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>measured I [mA]</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="output_I_lineEdit">
-          <property name="maxLength">
-           <number>20</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
+     <layout class="QGridLayout" name="gridLayout">
+      <property name="leftMargin">
+       <number>3</number>
+      </property>
+      <property name="topMargin">
+       <number>3</number>
+      </property>
+      <property name="rightMargin">
+       <number>3</number>
+      </property>
+      <property name="bottomMargin">
+       <number>3</number>
+      </property>
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>measured I [mA]</string>
+        </property>
+       </widget>
       </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_7">
-        <item>
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>measured V [V]</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="output_V_lineEdit">
-          <property name="maxLength">
-           <number>20</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>measured V [V]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="measured_V_lineEdit">
+        <property name="maxLength">
+         <number>20</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="measured_I_lineEdit">
+        <property name="maxLength">
+         <number>20</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <property name="spacing">
+      <number>3</number>
+     </property>
      <item>
       <widget class="QPushButton" name="on_pushButton">
        <property name="text">

@@ -27,37 +27,45 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         self.V_constant_voltage_doubleSpinBox.valueChanged.connect(self.set_V_constant_voltage)
         self.constant_current_radioButton.toggled.connect(self.set_smu_mode)
         self.constant_voltage_radioButton.toggled.connect(self.set_smu_mode)
-        self.on_pushButton.pressed.connect(self.ON)
-        self.on_pushButton.released.connect(self.OFF)
+        self.on_pushButton.toggled.connect(self.ON)
         self.off_pushButton.clicked.connect(self.OFF)
         self.set_smu_mode()
         self.smu.set_source_range('a', 'i', 1.5)
         self.smu.set_source_range('a', 'v', 20)
+        self.smu.set_measure_range('a', 'i', 1.5)
+        self.smu.set_measure_range('a', 'v', 20)
+        self.set_I_limit()
+        self.set_V_limit()
+        self.OFF()
         
-    def set_I_limit(self, I_limit):
-        self.smu.set_source_limit(self, 'a', 'i', self.I_limit/1e+3)
+    def set_I_limit(self):
+        self.smu.set_source_limit('a', 'i', self.I_limit/1e+3)
         
-    def set_V_limit(self, V_limit):
-        self.smu.set_source_limit(self, 'a', 'v', self.V_limit)
+    def set_V_limit(self):
+        self.smu.set_source_limit('a', 'v', self.V_limit)
         
     def set_I_constant_current(self, I_constant_current):
-        self.smu.set_source_function(self, 'a', 0)
         self.smu.set_source_level('a', 'i', I_constant_current/1e+3)
         
     def set_V_constant_voltage(self, V_constant_voltage):
-        self.smu.set_source_function(self, 'a', 1)
         self.smu.set_source_level('a', 'v', V_constant_voltage)
-        
+    
     def set_smu_mode(self):
         if self.constant_current_radioButton.isChecked():
+            self.smu.set_source_function('a', 0)
             self.mode = 'constant_current'
         elif self.constant_voltage_radioButton.isChecked():
+            self.smu.set_source_function('a', 1)
             self.mode = 'constant_voltage'
     
-    def ON(self):
-        self.smu.set_output('a', 1)
-        measure_thread = threading.Thread(target=self.measure_output)
-        measure_thread.start()
+    def ON(self, checked):
+        # checked state is passed by pushButton. If toggled to unchecked state, turn OFF
+        if checked:
+            self.smu.set_output('a', 1)
+            measure_thread = threading.Thread(target=self.measure_output)
+            measure_thread.start()
+        else:
+            self.OFF()
         
     def OFF(self):
         self.smu.set_output('a', 0)
@@ -66,10 +74,14 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         self.v = 0
     
     def measure_output(self):
+        """
+        Measure actual I and V output. Run as thread with values updated every 0.1s.
+        self.i, self.v contain the latest measured values.
+        """
         while self.smu.get_output('a'):
             self.i, self.v = self.smu.measure('a', 'iv')
-            self.output_I_lineEdit.setText('{}'.format(self.i*1e+3))
-            self.output_V_lineEdit.setText('{}'.format(self.v))
+            self.measured_I_lineEdit.setText('{:.3}'.format(self.i*1e+3))
+            self.measured_V_lineEdit.setText('{:.4}'.format(self.v))
             time.sleep(0.1)
     
 
