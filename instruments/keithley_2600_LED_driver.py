@@ -61,29 +61,46 @@ class keithley_2600_LED_driver_ui(interactive_ui):
     def ON(self, checked):
         # checked state is passed by pushButton. If toggled to unchecked state, turn OFF
         if checked:
+            self.LED_is_running = True
             self.smu.set_output('a', 1)
-            measure_thread = threading.Thread(target=self.measure_output)
+            measure_thread = threading.Thread(target=self.measure_thread)
             measure_thread.start()
         else:
             self.OFF()
         
     def OFF(self):
         self.smu.set_output('a', 0)
+        self.LED_is_running = False
         self.on_pushButton.setChecked(False)
         self.i = 0
         self.v = 0
     
-    def measure_output(self):
+    def measure_thread(self, measure_interval=0.1):
         """
-        Measure actual I and V output. Run as thread with values updated every 0.1s.
+        Measure actual I and V output. Run as thread with values updated every measure_interval seconds.
         self.i, self.v contain the latest measured values.
         """
-        while self.smu.get_output('a'):
+        while self.LED_is_running:
             self.i, self.v = self.smu.measure('a', 'iv')
             self.measured_I_lineEdit.setText('{:.3}'.format(self.i*1e+3))
             self.measured_V_lineEdit.setText('{:.4}'.format(self.v))
-            time.sleep(0.1)
+            time.sleep(measure_interval)
     
+    def toggle(self, checked):
+        if checked:
+            self.LED_is_running = True
+            toggle_thread = threading.Thread(target=self.toggle_thread)
+            toggle_thread.start()
+        else:
+            self.OFF()
+        
+    def toggle_thread(self):
+        while self.toggle_pushButton.isChecked():
+            self.smu.set_output('a', 1)
+            time.sleep(self.toggle_ON_time)
+            self.smu.set_output('a', 0)
+            time.sleep(self.toggle_OFF_time)
+            
 
 if __name__ == '__main__' :
     
