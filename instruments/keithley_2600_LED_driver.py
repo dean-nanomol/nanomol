@@ -31,6 +31,7 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         self.constant_voltage_radioButton.toggled.connect(self.set_smu_mode)
         self.on_pushButton.toggled.connect(self.ON)
         self.off_pushButton.clicked.connect(self.OFF)
+        self.toggle_pushButton.toggled.connect(self.toggle)
         self.set_smu_mode()
         self.smu.set_source_range('a', 'i', 1.5)
         self.smu.set_source_range('a', 'v', 20)
@@ -74,6 +75,7 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         self.smu.set_output('a', 0)
         self.LED_is_running = False
         self.on_pushButton.setChecked(False)
+        self.toggle_pushButton.setChecked(False)
         self.i = 0
         self.v = 0
     
