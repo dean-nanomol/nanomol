@@ -13,7 +13,9 @@ from nanomol.instruments.keithley_2600A import keithley_2600A
 from nanomol.utils.interactive_ui import interactive_ui
 
 class keithley_2600_LED_driver_ui(interactive_ui):
-    """ Keithley SMU used to drive an LED """
+    """
+    Keithley SMU used to drive an LED. 
+    """
     
     def __init__(self, smu):
         super().__init__()
@@ -89,7 +91,9 @@ class keithley_2600_LED_driver_ui(interactive_ui):
     def toggle(self, checked):
         if checked:
             self.LED_is_running = True
+            measure_thread = threading.Thread(target=self.measure_thread)
             toggle_thread = threading.Thread(target=self.toggle_thread)
+            measure_thread.start()
             toggle_thread.start()
         else:
             self.OFF()
