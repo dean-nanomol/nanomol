@@ -38,14 +38,11 @@ class plot_test(QtWidgets.QWidget):
             self.data['voltage'].append(v)
             self.update_plots()
             t = time.time() - t0
-            time.sleep(0.1)
+            time.sleep(0.02)
     
     def setup_plot_widgets(self):
         self.plot_widget = pg.PlotWidget()
         self.plot_layout.replaceWidget(self.placeholder_plot, self.plot_widget)
-        # self.voltage_vs_time.setBackground('w')
-        # self.voltage_vs_time.setLabel('bottom', 'time [s]', color='black')
-        # self.voltage_vs_time.setLabel('left', 'voltage', color='black')
 
     def clear_plots(self):
         self.plot_widget.clear()
