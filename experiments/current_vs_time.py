@@ -11,6 +11,7 @@ import time
 import os
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import pyqtSignal
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.interactive_ui import interactive_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
@@ -23,6 +24,8 @@ class current_vs_time(interactive_ui):
     Run measurement until the time limit, or set time limit to -1 to run indefinitely.
     """
     
+    update_plots_signal = pyqtSignal()
+    
     def __init__(self, datafile, smu):
         super().__init__()
         self.datafile = datafile
@@ -34,6 +37,7 @@ class current_vs_time(interactive_ui):
         self.stop_pushbutton.clicked.connect(self.stop_measurement)
         self.reset_plot_widgets_pushbutton.clicked.connect(self.setup_plot_widgets)
         self.shutdown_pushbutton.clicked.connect(self.shutdown)
+        self.update_plots_signal.connect(self.update_plots)
         self.setup_plot_widgets()
         self.measurement_is_running = False
         
@@ -74,7 +78,7 @@ class current_vs_time(interactive_ui):
             self.data['I_GS'].append(measured_I_GS)
             self.data['V_DS'].append(measured_V_DS)
             self.data['I_DS'].append(measured_I_DS)
-            self.update_plots()
+            self.update_plots_signal.emit()
             t = time.time() - t0
         self.smu.set_output(self.ch_GS, 0)
         self.smu.set_output(self.ch_DS, 0)
