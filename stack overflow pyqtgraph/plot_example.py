@@ -4,8 +4,11 @@ import time
 import os
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import pyqtSignal
 
 class plot_test(QtWidgets.QWidget):
+    
+    update_plots_signal = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -14,6 +17,7 @@ class plot_test(QtWidgets.QWidget):
         self.start_pushButton.clicked.connect(self.start_measurement)
         self.stop_pushButton.clicked.connect(self.stop_measurement)
         self.setup_plot_widgets()
+        self.update_plots_signal.connect(self.update_plots)
         self.measurement_is_running = False
         
     def start_measurement(self):
@@ -36,7 +40,7 @@ class plot_test(QtWidgets.QWidget):
             v = random.randint(0,9)
             self.data['time'].append(t)
             self.data['voltage'].append(v)
-            self.update_plots()
+            self.update_plots_signal.emit()
             t = time.time() - t0
             time.sleep(0.02)
     
