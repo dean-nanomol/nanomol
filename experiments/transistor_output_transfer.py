@@ -11,6 +11,7 @@ import time
 import os
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import pyqtSignal
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.interactive_ui import interactive_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
@@ -23,6 +24,8 @@ class transistor_output_transfer(interactive_ui):
     "curve" refers to the inner voltage loop, for example V_DS when measuring output curves.
     Measurements always record time and measured V and I values for both channels.
     """
+    
+    update_plots_signal = pyqtSignal()
     
     def __init__(self, datafile, smu):
         super().__init__()
@@ -49,6 +52,7 @@ class transistor_output_transfer(interactive_ui):
         self.plot_widgets_set_up = False
         self.set_measurement_mode()
         self.setup_plot_widgets()
+        self.update_plots_signal.connect(self.update_plots)
         self.set_sweep_direction()  # sweep is the external loop, V1
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
@@ -100,7 +104,7 @@ class transistor_output_transfer(interactive_ui):
                     self.data[self.I1_data_label].append(measured_I1)
                     self.data[self.V2_data_label].append(measured_V2)
                     self.data[self.I2_data_label].append(measured_I2)
-                    self.update_plots()
+                    self.update_plots_signal.emit()
                     if not self.measurement_is_running:
                         break
                     if self.delay_points != 0:
