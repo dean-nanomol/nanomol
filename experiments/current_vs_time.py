@@ -101,7 +101,7 @@ class current_vs_time(interactive_ui):
         
     def save_data(self):
         """ write data to hdf5 datafile """
-        active_group = self.datafile.get_unique_group_name(self.datafile, basename='I_vs_time', max_N=1000)
+        active_group = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=100)
         self.active_group =  self.datafile.create_group(active_group)
         self.active_group.attrs.create('description', self.description)
         self.active_group.attrs.create('timestamp', self.timestamp)
