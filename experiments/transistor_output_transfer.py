@@ -93,8 +93,9 @@ class transistor_output_transfer(interactive_ui):
                 # prepare new plot line for upcoming data
                 self.create_new_plot_lines()
                 self.color_index += 1
-                t0 = time.time()
                 self.smu.set_output(self.V2_ch, 1)
+                time.sleep(self.first_point_delay)
+                t0 = time.time()
                 for self.V2_active in self.V2:
                     self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                     measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
