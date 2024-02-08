@@ -447,6 +447,9 @@
               <property name="decimals">
                <number>3</number>
               </property>
+              <property name="minimum">
+               <double>0.001000000000000</double>
+              </property>
               <property name="singleStep">
                <double>1.000000000000000</double>
               </property>
@@ -564,6 +567,9 @@
              <widget class="QDoubleSpinBox" name="V_DS_step_output_doubleSpinBox">
               <property name="decimals">
                <number>3</number>
+              </property>
+              <property name="minimum">
+               <double>0.001000000000000</double>
               </property>
               <property name="singleStep">
                <double>0.050000000000000</double>
@@ -697,6 +703,9 @@
               <property name="decimals">
                <number>3</number>
               </property>
+              <property name="minimum">
+               <double>0.001000000000000</double>
+              </property>
               <property name="value">
                <double>1.000000000000000</double>
               </property>
@@ -811,6 +820,9 @@
              <widget class="QDoubleSpinBox" name="V_GS_step_transfer_doubleSpinBox">
               <property name="decimals">
                <number>3</number>
+              </property>
+              <property name="minimum">
+               <double>0.001000000000000</double>
               </property>
               <property name="value">
                <double>0.100000000000000</double>
