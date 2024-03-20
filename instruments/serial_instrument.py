@@ -20,7 +20,7 @@ class serial_instrument():
         port_settings : dict
             Dictionary of port settings. See pySerial API documentation for full parameter list.
         termination_character : str
-            Termination character for all messages, usually '\n', '\r' or 'r\n'
+            Termination character for all messages, usually '\n', '\r' or '\r\n'
         """
         
         self.instrument = serial.Serial(port, **port_settings)
