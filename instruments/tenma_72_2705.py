@@ -40,6 +40,25 @@ class tenma_72_2705(serial_instrument):
         """ returns set output voltage """
         return float(self.query('VSET1?'))
     
+    def output(self, output):
+        """ 0: OFF ; 1:ON """
+        self.write('OUT{}'.format(int(output)) )
+        
+    def status(self):
+        """
+        Returns
+        status : str
+            string of 8 bits. bit 0 is last.
+            bit 0: 0: constant current; 1:constant voltage
+            bit 6: 0: output OFF; 1: output ON
+            bits 1,2,3,4,5,7: not used
+            e.g. '00010010': OFF, constant current; '01010011': ON, constant voltage
+        """
+        status = self.query('STATUS?').encode()
+        status_int = ord(status)
+        status_bin = format(status_int, 'b').zfill(8)
+        status = status_bin
+        return status
 
 if __name__ == '__main__' :
     
