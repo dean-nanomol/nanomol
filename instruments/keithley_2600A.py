@@ -169,6 +169,19 @@ class keithley_2600A(visa_instrument):
             measurement integration time in number of power line cycles (nplc)
         """
         self.write('smu{}.measure.nplc = {}'.format(ch, nplc))
+        
+    def get_compliance(self, ch):
+        """
+        ch : str
+            channel, 'a' or 'b'
+
+        Returns
+        compliance : int
+            source compliance state. 0: source not in compliance; 1: source in compliance
+        """
+        compliance_state = self.query('print(smu{}.source.compliance)'.format(ch))
+        compliance_state = (compliance_state == 'true')
+        return int(compliance_state)
                           
     def get_output(self, ch):
         """
