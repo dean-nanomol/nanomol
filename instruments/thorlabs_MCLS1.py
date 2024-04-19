@@ -20,10 +20,13 @@ class thorlabs_MCLS1(serial_instrument):
     
     def query(self, command):
         """ override serial_instrument.query method """
-        # MCLS1 repeats command text and adds '>', so buffer may not be empty
+        # MCLS1 repeats each command it receives
+        # MCLS1 sends '>' when commands execute without errors, so buffer may not be empty
         self.reset_input_buffer()
-        super().query(command) # ignore first returned string, contains command repetition
-        return self.read()
+        if '?' in command:
+            # querying a value so ignore first returned string, contains command repetition
+            super().query(command)
+        return super().query(command)
     
     @property
     def channel(self):
@@ -31,7 +34,7 @@ class thorlabs_MCLS1(serial_instrument):
     @channel.setter
     def channel(self, channel):
         """ active channel """
-        self.write('channel={}'.format(int(channel)))
+        self.query('channel={}'.format(int(channel)))
         
     @property
     def target_temperature(self):
@@ -42,7 +45,7 @@ class thorlabs_MCLS1(serial_instrument):
         target_temperature : float
             active channel target temperature in °C, 20 <= target_temperature <= 30
         """
-        self.write('target={}'.format(target_temperature))
+        self.query('target={}'.format(target_temperature))
     
     @property
     def current(self):
@@ -53,7 +56,7 @@ class thorlabs_MCLS1(serial_instrument):
         current : float
             active channel current in mA
         """
-        self.write('current={}'.format(current))
+        self.query('current={}'.format(current))
     
     @property
     def temperature(self):
@@ -74,7 +77,7 @@ class thorlabs_MCLS1(serial_instrument):
         enable : int
             0 or 1, disable or enable active laser channel
         """
-        self.write('enable={}'.format(enable))
+        self.query('enable={}'.format(enable))
         
     @property
     def system_enable(self):
@@ -85,7 +88,7 @@ class thorlabs_MCLS1(serial_instrument):
         system_enable : int
             0 or 1, disable or enable laser system
         """
-        self.write('system={}'.format(system_enable))
+        self.query('system={}'.format(system_enable))
         
     @property
     def specs(self):
@@ -174,16 +177,16 @@ class thorlabs_MCLS1_ui(interactive_ui):
     def get_power(self):
         if self.sender() == self.get_power_ch1_pushButton:
             self.MCLS1.channel = 1
-            self.power_ch1_lineEdit.setText(self.MCLS1.power)
+            self.power_ch1_lineEdit.setText(str(self.MCLS1.power))
         elif self.sender() == self.get_power_ch2_pushButton:
             self.MCLS1.channel = 2
-            self.power_ch2_lineEdit.setText(self.MCLS1.power)
+            self.power_ch2_lineEdit.setText(str(self.MCLS1.power))
         elif self.sender() == self.get_power_ch3_pushButton:
             self.MCLS1.channel = 3
-            self.power_ch3_lineEdit.setText(self.MCLS1.power)
+            self.power_ch3_lineEdit.setText(str(self.MCLS1.power))
         elif self.sender() == self.get_power_ch4_pushButton:
             self.MCLS1.channel = 4
-            self.power_ch4_lineEdit.setText(self.MCLS1.power)
+            self.power_ch4_lineEdit.setText(str(self.MCLS1.power))
     
     def set_target_temperature(self):
         if self.sender() == self.target_T_ch1_doubleSpinBox:
@@ -203,16 +206,16 @@ class thorlabs_MCLS1_ui(interactive_ui):
     def get_temperature(self):
         if self.sender() == self.get_T_ch1_pushButton:
             self.MCLS1.channel = 1
-            self.T_ch1_lineEdit.setText(self.MCLS1.temperature)
+            self.T_ch1_lineEdit.setText(str(self.MCLS1.temperature))
         elif self.sender() == self.get_T_ch2_pushButton:
             self.MCLS1.channel = 2
-            self.T_ch2_lineEdit.setText(self.MCLS1.temperature)
+            self.T_ch2_lineEdit.setText(str(self.MCLS1.temperature))
         elif self.sender() == self.get_T_ch3_pushButton:
             self.MCLS1.channel = 3
-            self.T_ch3_lineEdit.setText(self.MCLS1.temperature)
+            self.T_ch3_lineEdit.setText(str(self.MCLS1.temperature))
         elif self.sender() == self.get_T_ch4_pushButton:
             self.MCLS1.channel = 4
-            self.T_ch4_lineEdit.setText(self.MCLS1.temperature)
+            self.T_ch4_lineEdit.setText(str(self.MCLS1.temperature))
         
         
 if __name__ == '__main__' :
