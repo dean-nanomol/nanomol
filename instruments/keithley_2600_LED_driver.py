@@ -86,8 +86,8 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         """
         while self.LED_is_running:
             self.i, self.v = self.smu.measure('a', 'iv')
-            self.measured_I_lineEdit.setText('{:.3}'.format(self.i*1e+3))
-            self.measured_V_lineEdit.setText('{:.4}'.format(self.v))
+            self.measured_I_lineEdit.setText('{:.3f}'.format(self.i*1e+3))
+            self.measured_V_lineEdit.setText('{:.4f}'.format(self.v))
             time.sleep(measure_interval)
     
     def toggle(self, checked):
