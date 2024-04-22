@@ -101,6 +101,8 @@ class transistor_output_transfer_LED(interactive_ui):
                     self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                     measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
                     measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                    compliance_V1 = self.smu.get_compliance(self.V1_ch)
+                    compliance_V2 = self.smu.get_compliance(self.V2_ch)
                     if self.use_LED_checkBox.isChecked():
                         LED_output = self.LED.smu.get_output('a')
                         measured_LED_I = self.LED.i
@@ -108,11 +110,15 @@ class transistor_output_transfer_LED(interactive_ui):
                         self.data['LED_output'].append(LED_output)
                         self.data['measured_LED_current'].append(measured_LED_I)
                         self.data['measured_LED_voltage'].append(measured_LED_V)
-                    self.data['time'].append(time.time() - t0)
-                    self.data[self.V1_data_label].append(measured_V1)
-                    self.data[self.I1_data_label].append(measured_I1)
-                    self.data[self.V2_data_label].append(measured_V2)
-                    self.data[self.I2_data_label].append(measured_I2)
+                    self.data[self.dataset_labels['time']].append(time.time() - t0)
+                    self.data[self.dataset_labels['measured_V1']].append(measured_V1)
+                    self.data[self.dataset_labels['measured_I1']].append(measured_I1)
+                    self.data[self.dataset_labels['measured_V2']].append(measured_V2)
+                    self.data[self.dataset_labels['measured_I2']].append(measured_I2)
+                    self.data[self.dataset_labels['calculated_V1']].append(self.V1_active)
+                    self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
+                    self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
+                    self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
                     self.update_plots_signal.emit()
                     if not self.measurement_is_running:
                         break
@@ -144,10 +150,16 @@ class transistor_output_transfer_LED(interactive_ui):
             self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
             self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
             self.V2 = np.arange(self.V_GS_min_transfer, self.V_GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
-        self.V1_data_label = 'measured_V_{}'.format(self.V1_label)
-        self.I1_data_label = 'measured_I_{}'.format(self.V1_label)
-        self.V2_data_label = 'measured_V_{}'.format(self.V2_label)
-        self.I2_data_label = 'measured_I_{}'.format(self.V2_label)
+        self.dataset_labels = {
+            'time' : 'time',
+            'measured_V1' : 'measured_V_{}'.format(self.V1_label),
+            'measured_I1' : 'measured_I_{}'.format(self.V1_label),
+            'measured_V2' : 'measured_V_{}'.format(self.V2_label),
+            'measured_I2' : 'measured_I_{}'.format(self.V2_label),
+            'calculated_V1' : 'calculated_V_{}'.format(self.V1_label),
+            'calculated_V2' : 'calculated_V_{}'.format(self.V2_label),
+            'compliance_V1' : 'compliance_V_{}'.format(self.V1_label),
+            'compliance_V2' : 'compliance_V_{}'.format(self.V2_label) }
         if self.sweep_direction == -1:
             self.V1 = np.flip(self.V1)
         if self.sweep_loop:
@@ -159,21 +171,22 @@ class transistor_output_transfer_LED(interactive_ui):
         # save measurement settings and attributes
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
+        self.active_sweep_group.attrs.create('GS_channel', self.ch_GS)
+        self.active_sweep_group.attrs.create('DS_channel', self.ch_DS)
         for key, value in self.smu.get_settings().items():
             self.active_sweep_group.attrs.create('keithley_{}'.format(key), value)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def initialise_datasets(self):
-        self.data = {'time': [],
-                     self.V1_data_label: [],
-                     self.I1_data_label: [],
-                     self.V2_data_label: [],
-                     self.I2_data_label: []  }
+        self.data = {}
+        for label in self.dataset_labels.values():
+            self.data[label] = []
         if self.use_LED_checkBox.isChecked():
-            self.data.update({'LED_output': [],
-                              'measured_LED_current': [],
-                              'measured_LED_voltage': [] })
+            self.data.update({
+                'LED_output': [],
+                'measured_LED_current': [],
+                'measured_LED_voltage': [] })
         
     def save_data(self):
         """ write data to hdf5 datafile """
@@ -251,14 +264,18 @@ class transistor_output_transfer_LED(interactive_ui):
     def create_new_plot_lines(self):
         color = pg.intColor(self.color_index, hues=self.V1.size*self.N_measurements)
         pen = pg.mkPen(color=color)
-        self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.V2_data_label], self.data[self.I2_data_label],
+        self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
+                                                self.data[self.dataset_labels['measured_I2']],
                                                 pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
-        self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.V2_data_label], self.data[self.I1_data_label],
+        self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
+                                                self.data[self.dataset_labels['measured_I1']],
                                                 pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
         
     def update_plots(self):
-        self.I2_vs_V2_line.setData(self.data[self.V2_data_label], self.data[self.I2_data_label] )
-        self.I1_vs_V2_line.setData(self.data[self.V2_data_label], self.data[self.I1_data_label] )
+        self.I2_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],
+                                   self.data[self.dataset_labels['measured_I2']] )
+        self.I1_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],
+                                   self.data[self.dataset_labels['measured_I1']] )
     
     def shutdown(self):
         self.datafile.close()
@@ -270,7 +287,6 @@ if __name__ == '__main__' :
     datafile = hdf5_datafile(mode='x')
     smu = keithley_2600A('GPIB0::27::INSTR')
     LED_smu = keithley_2600A('GPIB0::26::INSTR')
-    
     
     experiment_app = QtWidgets.QApplication([])
     
