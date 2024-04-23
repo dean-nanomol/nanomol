@@ -197,10 +197,10 @@ class optosigma_GSC_01_ui(interactive_ui):
         self.jog_negative_pushButton.released.connect(self.jog_stop)
         self.jog_speed_comboBox.currentTextChanged.connect(self.set_jog_speed)
         self.custom_jog_speed_spinBox.valueChanged.connect(self.set_jog_speed)
-        self.set_current_software_min_pushButton.clicked.connect(self.set_soft_limit)
-        self.set_current_software_max_pushButton.clicked.connect(self.set_soft_limit)
-        self.software_limit_min_spinBox.valueChanged.connect(self.set_soft_limit)
-        self.software_limit_max_spinBox.valueChanged.connect(self.set_soft_limit)
+        self.set_current_software_min_pushButton.clicked.connect(self.set_software_limit)
+        self.set_current_software_max_pushButton.clicked.connect(self.set_software_limit)
+        self.software_limit_min_spinBox.valueChanged.connect(self.set_software_limit)
+        self.software_limit_max_spinBox.valueChanged.connect(self.set_software_limit)
         self.origin_pushButton.clicked.connect(self.origin)
         self.home_pushButton.clicked.connect(self.home)
         self.update_position()
@@ -239,11 +239,11 @@ class optosigma_GSC_01_ui(interactive_ui):
         self.GSC01.stop()
         self.update_position()
         
-    def set_soft_limit(self):
-        if self.sender() == self.set_current_soft_min_pushButton:
+    def set_software_limit(self):
+        if self.sender() == self.set_current_software_min_pushButton:
             self.GSC01.software_limit_min = self.GSC01.position
             self.software_limit_min_spinBox.setValue(self.GSC01.software_limit_min)
-        elif self.sender() == self.set_current_soft_max_pushButton:
+        elif self.sender() == self.set_current_software_max_pushButton:
             self.GSC01.software_limit_max = self.GSC01.position
             self.software_limit_max_spinBox.setValue(self.GSC01.software_limit_max)
         elif self.sender() == self.software_limit_min_spinBox:
