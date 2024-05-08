@@ -248,14 +248,14 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QPushButton" name="current_as_start_pushButton">
+         <widget class="QPushButton" name="current_position_as_start_pushButton">
           <property name="text">
            <string>set current position as start</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="current_as_stop_pushButton">
+         <widget class="QPushButton" name="current_position_as_stop_pushButton">
           <property name="text">
            <string>set current position as stop</string>
           </property>
@@ -267,7 +267,22 @@
     </widget>
    </item>
    <item>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_2"/>
+    <layout class="QHBoxLayout" name="horizontalLayout_8">
+     <item>
+      <widget class="QPushButton" name="start_grid_scan_pushButton">
+       <property name="text">
+        <string>start grid scan</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="stop_grid_scan_pushButton">
+       <property name="text">
+        <string>stop grid scan</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
