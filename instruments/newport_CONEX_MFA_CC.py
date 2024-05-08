@@ -202,8 +202,8 @@ class newport_CONEX_MFA_CC_XY_ui(interactive_ui):
         
 if __name__ == '__main__' :
     
-    myMFACC_X = newport_CONEX_MFA_CC('COM3')
-    myMFACC_Y = newport_CONEX_MFA_CC('COM4')
+    myMFACC_X = newport_CONEX_MFA_CC('COM5')
+    myMFACC_Y = newport_CONEX_MFA_CC('COM6')
     
     ui_app = QtWidgets.QApplication([])
     ui = newport_CONEX_MFA_CC_XY_ui(myMFACC_X, myMFACC_Y)
