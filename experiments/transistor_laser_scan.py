@@ -32,20 +32,12 @@ class transistor_laser_scan(interactive_ui):
         self.stop_grid_scan_pushButton.clicked.connect(self.stop_grid_scan)
         self.current_position_as_start_pushButton.clicked.connect(self.current_position_as_start)
         self.current_position_as_stop_pushButton.clicked.connect(self.current_position_as_stop)
-        self.grid_X_start_doubleSpinBox.valueChanged.connect(self.calculate_number_grid_points)
-        self.grid_X_stop_doubleSpinBox.valueChanged.connect(self.calculate_number_grid_points)
-        self.grid_X_step_doubleSpinBox.valueChanged.connect(self.calculate_number_grid_points)
-        self.grid_Y_start_doubleSpinBox.valueChanged.connect(self.calculate_number_grid_points)
-        self.grid_Y_stop_doubleSpinBox.valueChanged.connect(self.calculate_number_grid_points)
-        self.grid_Y_step_doubleSpinBox.valueChanged.connect(self.calculate_number_grid_points)
-        
+        self.calculate_number_grid_points_pushButton.clicked.connect(self.calculate_number_grid_points)
         self.grid_scan_is_running = False
         
     def start_grid_scan(self):
-        print('starting: {}'.format(self.grid_scan_is_running))
         if not self.grid_scan_is_running:  # do nothing if measurement is already running
             self.grid_scan_is_running = True
-            print('started: {}'.format(self.grid_scan_is_running))
             grid_scan_thread = threading.Thread(target=self.run_grid_scan)
             grid_scan_thread.start()
     
@@ -53,44 +45,38 @@ class transistor_laser_scan(interactive_ui):
         self.grid_scan_is_running = False
     
     def run_grid_scan(self):
-        
-        self.num_X_points = int( -(abs(self.grid_X_stop - self.grid_X_start) // -self.grid_X_step)) +1
-        self.num_Y_points = int( -(abs(self.grid_Y_stop - self.grid_Y_start) // -self.grid_Y_step)) +1
+        self.configure_XY_grid()
         if self.grid_X_stop >= self.grid_X_start:
-            grid_X_scan_stop = self.grid_X_start + self.num_X_points*self.grid_X_step
+            grid_X_scan_stop = round(self.grid_X_start + (self.num_X_points-1)*self.grid_X_step, ndigits=3)
         else:
-            grid_X_scan_stop = self.grid_X_start - self.num_X_points*self.grid_X_step
+            grid_X_scan_stop = round(self.grid_X_start - (self.num_X_points-1)*self.grid_X_step, ndigits=3)
         if self.grid_Y_stop >= self.grid_Y_start: 
-            grid_Y_scan_stop = self.grid_Y_start + self.num_Y_points*self.grid_Y_step
+            grid_Y_scan_stop = round(self.grid_Y_start + (self.num_Y_points-1)*self.grid_Y_step, ndigits=3)
         else:
-            grid_Y_scan_stop = self.grid_Y_start - self.num_Y_points*self.grid_Y_step
+            grid_Y_scan_stop = round(self.grid_Y_start - (self.num_Y_points-1)*self.grid_Y_step, ndigits=3)
         self.grid_X_points = np.linspace(self.grid_X_start, grid_X_scan_stop, num = self.num_X_points)
         self.grid_Y_points = np.linspace(self.grid_Y_start, grid_Y_scan_stop, num = self.num_Y_points)
-        # if self.grid_X_stop >= self.grid_X_start:
-        #     self.grid_X_points = np.arange(self.grid_X_start, self.grid_X_stop + self.grid_X_step, self.grid_X_step)
-        # else:
-        #     self.grid_X_points = np.arange(self.grid_X_start, self.grid_X_stop - self.grid_X_step, -self.grid_X_step)
-        # if self.grid_Y_stop >= self.grid_Y_start:
-        #     self.grid_Y_points = np.arange(self.grid_Y_start, self.grid_Y_stop + self.grid_Y_step, self.grid_Y_step)
-        # else:
-        #     self.grid_Y_points = np.arange(self.grid_Y_start, self.grid_Y_stop - self.grid_Y_step, -self.grid_Y_step)
-        print('points X: {}'.format(self.grid_X_points))
-        print('points Y: {}'.format(self.grid_Y_points))
-        print('running')
-        for position_X in self.grid_X_points:
-            self.stage_X.move_absolute(position_X)
-            self.wait_for_motion_completed(self.stage_X)
-            for position_Y in self.grid_Y_points:
-                self.stage_Y.move_absolute(position_Y)
-                self.wait_for_motion_completed(self.stage_Y)
+        for position_Y in self.grid_Y_points:
+            self.stage_Y.move_absolute(position_Y)
+            self.wait_for_motion_completed(self.stage_Y)
+            for position_X in self.grid_X_points:
+                self.stage_X.move_absolute(position_X)
+                self.wait_for_motion_completed(self.stage_X)
                 time.sleep(0.2)
-                print('moved, X:{:.4f}, Y:{:.4f}'.format(self.stage_X.position(), stage_Y.position()))
                 if not self.grid_scan_is_running:
                     break
             if not self.grid_scan_is_running:
                 break
         self.grid_scan_is_running = False
-        print('finished: {}'.format(self.grid_scan_is_running))
+        
+    def configure_XY_grid(self):
+        # Configure grid with steps and start/stop points from ui.
+        # -(a // -b) emulates ceiling function. If endpoint falls beteween grid points, extend grid to contain it.
+        # round() used to eliminate rounding errors when subtracting start/stop coordinates.
+        num_X_steps = -(abs(round(self.grid_X_stop - self.grid_X_start, ndigits=3)) // -self.grid_X_step)
+        self.num_X_points = int(num_X_steps) +1
+        num_Y_steps = -(abs(round(self.grid_Y_stop - self.grid_Y_start, ndigits=3)) // -self.grid_Y_step)
+        self.num_Y_points = int(num_Y_steps) +1
     
     def current_position_as_start(self):
         position_X = round(self.stage_X.position(), ndigits=3)
@@ -105,11 +91,9 @@ class transistor_laser_scan(interactive_ui):
         self.grid_Y_stop_doubleSpinBox.setValue(position_Y)
         
     def calculate_number_grid_points(self):
-        #TODO fix count with linspace
-        num_X_points = round(abs(self.grid_X_stop - self.grid_X_start)/self.grid_X_step) +1
-        num_Y_points = round(abs(self.grid_Y_stop - self.grid_Y_start)/self.grid_Y_step) +1
-        num_grid_points = num_X_points * num_Y_points
-        self.grid_num_points_lineEdit.setText('{} x {} = {}'.format(num_X_points, num_Y_points, num_grid_points))
+        self.configure_XY_grid()
+        num_grid_points = self.num_X_points * self.num_Y_points
+        self.grid_num_points_lineEdit.setText('{} x {} = {}'.format(self.num_X_points, self.num_Y_points, num_grid_points))
         
     def wait_for_motion_completed(self, stage):
         while stage.is_moving():
