@@ -14,33 +14,29 @@ from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.interactive_ui import interactive_ui
-from nanomol.utils.hdf5_datafile import hdf5_datafile
-from nanomol.utils.hdf5_viewer import hdf5_viewer
 
-class transistor_output_transfer(interactive_ui):
+class transistor_transfer(interactive_ui):
     """
-    Class for measurement of transistor output and transfer curves.
-    "sweep" refers to the outer voltage loop, for example V_GS when measuring output curves.
-    "curve" refers to the inner voltage loop, for example V_DS when measuring output curves.
-    Measurements always record time and measured V and I values for both channels.
+    Class for measurement of transistor transfer curves.
+    "sweep" refers to the outer voltage loop, V_DS.
+    "curve" refers to the inner voltage loop, V_GS.
+    Data can only be saved if an hdf5_datafile object is passed upon object creation.
+    Data plotting and saving can be turned on/off.
     """
     
     update_plots_signal = pyqtSignal()
     
-    def __init__(self, datafile, smu):
+    def __init__(self,smu,  datafile=None):
         super().__init__()
-        self.datafile = datafile
+        if datafile is not None:
+            self.datafile = datafile
         self.smu = smu
-        ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_output_transfer.ui')
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_transfer.ui')
         uic.loadUi(ui_file_path, self)
         # set gate-source and drain-source channels
         self.connect_widgets_by_name()
-        self.output_mode_radiobutton.clicked.connect(self.set_measurement_mode)
-        self.transfer_mode_radiobutton.clicked.connect(self.set_measurement_mode)
         self.start_pushbutton.clicked.connect(self.start_measurement)
         self.stop_pushbutton.clicked.connect(self.stop_measurement)
-        self.reset_plot_widgets_pushbutton.clicked.connect(self.setup_plot_widgets)
-        self.shutdown_pushbutton.clicked.connect(self.shutdown)
         self.sweep_one_way_radioButton.clicked.connect(self.set_sweep_loop)
         self.sweep_loop_radioButton.clicked.connect(self.set_sweep_loop)
         self.curve_one_way_radioButton.clicked.connect(self.set_curve_loop)
@@ -79,22 +75,20 @@ class transistor_output_transfer(interactive_ui):
         self.smu.set_output(self.V1_ch, 1)
         for self.measurement_counter in range(self.N_measurements):
             for self.V1_active in self.V1:
-                active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
-                self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
-                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
-                self.active_curve_group.attrs.create('timestamp', timestamp )
-                self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
-                self.active_curve_group.attrs.create('measurement_counter', data=self.measurement_counter)
+                if self.save_data_checkBox.isChecked():
+                    self.save_curve_attrs()
                 # reset curve datasets for new curve
                 self.initialise_datasets()
                 self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
                 self.V2_active = self.V2[0]
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                 # prepare new plot line for upcoming data
-                self.create_new_plot_lines()
+                if self.live_plotting_checkBox.isChecked():
+                    self.create_new_plot_lines()
                 self.color_index += 1
                 self.smu.set_output(self.V2_ch, 1)
-                time.sleep(self.first_point_delay)
+                if self.first_point_delay != 0:
+                    time.sleep(self.first_point_delay)
                 t0 = time.time()
                 for self.V2_active in self.V2:
                     self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
@@ -111,13 +105,15 @@ class transistor_output_transfer(interactive_ui):
                     self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
                     self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
                     self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
-                    self.update_plots_signal.emit()
+                    if self.live_plotting_checkBox.isChecked():
+                        self.update_plots_signal.emit()
                     if not self.measurement_is_running:
                         break
                     if self.delay_points != 0:
                         time.sleep(self.delay_points)
                 self.smu.set_output(self.V2_ch, 0)
-                self.save_data()
+                if self.save_data_checkBox.isChecked():
+                    self.save_data()
                 if not self.measurement_is_running:
                     break
                 if self.delay_curves != 0:
@@ -125,23 +121,19 @@ class transistor_output_transfer(interactive_ui):
         self.smu.set_output(self.V1_ch, 0)
         self.measurement_is_running = False
             
-    
     def configure_measurement(self):
         """
-        Set output/transfer measurement type, define voltages to apply, save instrument settings and basic attributes.
+        Define voltages to apply, save instrument settings and basic attributes.
         """
-        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=100)
-        self.active_sweep_group =  self.datafile.create_group(active_sweep_name)
         self.smu.set_source_function('a', 1)
         self.smu.set_source_function('b', 1)
-        if self.measurement_mode == 'output':
-            self.V1_ch, self.V2_ch = self.ch_GS, self.ch_DS
-            self.V1 = np.arange(self.V_GS_min_output, self.V_GS_max_output + self.V_GS_step_output, self.V_GS_step_output)
-            self.V2 = np.arange(self.V_DS_min_output, self.V_DS_max_output + self.V_DS_step_output, self.V_DS_step_output)
-        elif self.measurement_mode == 'transfer':
-            self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
-            self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
-            self.V2 = np.arange(self.V_GS_min_transfer, self.V_GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
+        # if self.measurement_mode == 'output':
+        #     self.V1_ch, self.V2_ch = self.ch_GS, self.ch_DS
+        #     self.V1 = np.arange(self.V_GS_min_output, self.V_GS_max_output + self.V_GS_step_output, self.V_GS_step_output)
+        #     self.V2 = np.arange(self.V_DS_min_output, self.V_DS_max_output + self.V_DS_step_output, self.V_DS_step_output)
+        self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
+        self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
+        self.V2 = np.arange(self.V_GS_min_transfer, self.V_GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
         self.dataset_labels = {
             'time' : 'time',
             'measured_V1' : 'measured_V_{}'.format(self.V1_label),
@@ -160,7 +152,19 @@ class transistor_output_transfer(interactive_ui):
             self.V2 = np.flip(self.V2)
         if self.curve_loop:
             self.V2 = np.append(self.V2, np.flip(self.V2) )
-        # save measurement settings and attributes
+        ## save measurement settings and attributes
+        if self.save_data_checkBox.isChecked():
+            self.save_sweep_attrs()
+    
+    def initialise_datasets(self):
+        # initialise all datasets with empty lists
+        self.data = {}
+        for label in self.dataset_labels.values():
+            self.data[label] = []
+            
+    def save_sweep_attrs(self):
+        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename='sweep', max_N=1000)
+        self.active_sweep_group =  self.datafile.create_group(active_sweep_name)
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
         self.active_sweep_group.attrs.create('GS_channel', self.ch_GS)
@@ -170,11 +174,13 @@ class transistor_output_transfer(interactive_ui):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
-    def initialise_datasets(self):
-        # initialise all datasets with empty lists
-        self.data = {}
-        for label in self.dataset_labels.values():
-            self.data[label] = []
+    def save_curve_attrs(self):
+        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
+        self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
+        self.active_curve_group.attrs.create('timestamp', timestamp )
+        self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
+        self.active_curve_group.attrs.create('measurement_counter', data=self.measurement_counter)
         
     def save_data(self):
         # write data to hdf5 datafile
@@ -186,12 +192,13 @@ class transistor_output_transfer(interactive_ui):
         self.datafile.flush()
     
     def set_measurement_mode(self):
-        if self.output_mode_radiobutton.isChecked():
-            self.measurement_mode = 'output'
-            self.V1_label, self.V2_label = 'GS', 'DS'
-        elif self.transfer_mode_radiobutton.isChecked():
-            self.measurement_mode = 'transfer'
-            self.V1_label, self.V2_label = 'DS', 'GS'
+        # if self.output_mode_radiobutton.isChecked():
+        #     self.measurement_mode = 'output'
+        #     self.V1_label, self.V2_label = 'GS', 'DS'
+        # elif self.transfer_mode_radiobutton.isChecked():
+            # self.measurement_mode = 'transfer'
+        self.measurement_mode = 'transfer'
+        self.V1_label, self.V2_label = 'DS', 'GS'
         if self.plot_widgets_set_up:
             self.set_plot_labels()
             
@@ -273,12 +280,16 @@ class transistor_output_transfer(interactive_ui):
         
 if __name__ == '__main__' :
     
+    from nanomol.utils.hdf5_datafile import hdf5_datafile
+    from nanomol.utils.hdf5_viewer import hdf5_viewer
+    
     datafile = hdf5_datafile(mode='x')
-    smu = keithley_2600A('GPIB0::27::INSTR')
+    smu = keithley_2600A('USB0::0x05E6::0x2604::4101847::INSTR')
     
     experiment_app = QtWidgets.QApplication([])
     
-    experiment = transistor_output_transfer(datafile, smu)
+    experiment = transistor_transfer(smu, datafile=datafile)
+    #experiment = transistor_transfer(smu)
     datafile_viewer = hdf5_viewer(datafile)
     smu_ui = keithley_2600A_ui(smu)
     experiment.show()
