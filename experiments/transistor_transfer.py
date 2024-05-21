@@ -26,7 +26,7 @@ class transistor_transfer(interactive_ui):
     
     update_plots_signal = pyqtSignal()
     
-    def __init__(self,smu,  datafile=None):
+    def __init__(self, smu,  datafile=None):
         super().__init__()
         if datafile is not None:
             self.datafile = datafile
@@ -127,10 +127,6 @@ class transistor_transfer(interactive_ui):
         """
         self.smu.set_source_function('a', 1)
         self.smu.set_source_function('b', 1)
-        # if self.measurement_mode == 'output':
-        #     self.V1_ch, self.V2_ch = self.ch_GS, self.ch_DS
-        #     self.V1 = np.arange(self.V_GS_min_output, self.V_GS_max_output + self.V_GS_step_output, self.V_GS_step_output)
-        #     self.V2 = np.arange(self.V_DS_min_output, self.V_DS_max_output + self.V_DS_step_output, self.V_DS_step_output)
         self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
         self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
         self.V2 = np.arange(self.V_GS_min_transfer, self.V_GS_max_transfer + self.V_GS_step_transfer, self.V_GS_step_transfer)
@@ -152,7 +148,7 @@ class transistor_transfer(interactive_ui):
             self.V2 = np.flip(self.V2)
         if self.curve_loop:
             self.V2 = np.append(self.V2, np.flip(self.V2) )
-        ## save measurement settings and attributes
+        # save measurement settings and attributes
         if self.save_data_checkBox.isChecked():
             self.save_sweep_attrs()
     
@@ -192,11 +188,6 @@ class transistor_transfer(interactive_ui):
         self.datafile.flush()
     
     def set_measurement_mode(self):
-        # if self.output_mode_radiobutton.isChecked():
-        #     self.measurement_mode = 'output'
-        #     self.V1_label, self.V2_label = 'GS', 'DS'
-        # elif self.transfer_mode_radiobutton.isChecked():
-            # self.measurement_mode = 'transfer'
         self.measurement_mode = 'transfer'
         self.V1_label, self.V2_label = 'DS', 'GS'
         if self.plot_widgets_set_up:
@@ -289,7 +280,6 @@ if __name__ == '__main__' :
     experiment_app = QtWidgets.QApplication([])
     
     experiment = transistor_transfer(smu, datafile=datafile)
-    #experiment = transistor_transfer(smu)
     datafile_viewer = hdf5_viewer(datafile)
     smu_ui = keithley_2600A_ui(smu)
     experiment.show()
