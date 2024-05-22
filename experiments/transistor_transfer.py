@@ -55,7 +55,20 @@ class transistor_transfer(interactive_ui):
         self.set_curve_loop()
         self.measurement_is_running = False  # flag to start and stop a measurement
     
-    def start_measurement(self):
+    def start_measurement(self, data_path=None):
+        """
+        data_path : hdf5 group [optional, default=None]
+            hdf5 group where data of the measurement will be saved. Useful when calling externally to save data in
+            specific hdf5 group of an existing file. If data_path is not provided (e.g. executing from ui button)
+            default to saving in root group of class datafile.
+        """
+        if data_path is not None:
+            self.data_path = data_path
+        else:
+            if self.save_data_checkBox.isChecked():
+                self.data_path = self.datafile
+            else:
+                self.data_path = None
         if not self.measurement_is_running:  # do nothing if measurement is already running
             self.measurement_is_running = True
             measurement_thread = threading.Thread(target=self.run_measurement)
@@ -159,8 +172,8 @@ class transistor_transfer(interactive_ui):
             self.data[label] = []
             
     def save_sweep_attrs(self):
-        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename='sweep', max_N=1000)
-        self.active_sweep_group =  self.datafile.create_group(active_sweep_name)
+        active_sweep_name = self.data_path.get_unique_group_name(self.data_path, basename=self.description, max_N=1000)
+        self.active_sweep_group =  self.data_path.create_group(active_sweep_name)
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
         self.active_sweep_group.attrs.create('GS_channel', self.ch_GS)
@@ -171,7 +184,7 @@ class transistor_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def save_curve_attrs(self):
-        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
+        active_curve_name = self.data_path.get_unique_group_name(self.active_sweep_group, basename='curve')
         self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_curve_group.attrs.create('timestamp', timestamp )
@@ -185,7 +198,7 @@ class transistor_transfer(interactive_ui):
                 data = np.array(data)
                 data -= data[0]
             self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
-        self.datafile.flush()
+        self.data_path.file.flush()
     
     def set_measurement_mode(self):
         self.measurement_mode = 'transfer'
