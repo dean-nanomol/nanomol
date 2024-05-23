@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>247</width>
-    <height>322</height>
+    <width>257</width>
+    <height>371</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,52 +30,123 @@
     <number>3</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="spacing">
-      <number>3</number>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>limits and ranges</string>
      </property>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>current limit [mA]</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QDoubleSpinBox" name="I_limit_doubleSpinBox">
-       <property name="maximum">
-        <double>1500.000000000000000</double>
-       </property>
-       <property name="value">
-        <double>100.000000000000000</double>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <property name="spacing">
-      <number>3</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>voltage limit [V]</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QDoubleSpinBox" name="V_limit_doubleSpinBox">
-       <property name="decimals">
-        <number>4</number>
-       </property>
-       <property name="value">
-        <double>4.000000000000000</double>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>current range [A]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>voltage limit [V]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>voltage range [V]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QDoubleSpinBox" name="I_limit_doubleSpinBox">
+        <property name="maximum">
+         <double>1500.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>100.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>current limit [mA]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QDoubleSpinBox" name="V_limit_doubleSpinBox">
+        <property name="decimals">
+         <number>3</number>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>2.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="I_source_range_comboBox">
+        <property name="currentIndex">
+         <number>2</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>1e-3</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1e-2</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1e-1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>3</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="V_source_range_comboBox">
+        <property name="currentIndex">
+         <number>2</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>0.1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>6</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>40</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBox">
@@ -101,7 +172,7 @@
       <item row="0" column="1">
        <widget class="QDoubleSpinBox" name="I_constant_current_doubleSpinBox">
         <property name="decimals">
-         <number>2</number>
+         <number>3</number>
         </property>
         <property name="maximum">
          <double>1500.000000000000000</double>

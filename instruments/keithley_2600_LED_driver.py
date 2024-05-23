@@ -33,10 +33,10 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         self.off_pushButton.clicked.connect(self.OFF)
         self.toggle_pushButton.toggled.connect(self.toggle)
         self.set_smu_mode()
-        self.smu.set_source_range('a', 'i', 1.5)
-        self.smu.set_source_range('a', 'v', 20)
-        self.smu.set_measure_range('a', 'i', 1.5)
-        self.smu.set_measure_range('a', 'v', 20)
+        self.I_source_range_comboBox.currentTextChanged.connect(self.set_I_source_range)
+        self.V_source_range_comboBox.currentTextChanged.connect(self.set_V_source_range)
+        self.set_I_source_range()
+        self.set_V_source_range()
         self.set_I_limit()
         self.set_V_limit()
         self.OFF()
@@ -46,6 +46,14 @@ class keithley_2600_LED_driver_ui(interactive_ui):
         
     def set_V_limit(self):
         self.smu.set_source_limit('a', 'v', self.V_limit)
+        
+    def set_I_source_range(self):
+        self.smu.set_source_range('a', 'i', self.I_source_range_comboBox.currentText() )
+        self.smu.set_measure_range('a', 'i', self.I_source_range_comboBox.currentText() )
+        
+    def set_V_source_range(self):
+        self.smu.set_source_range('a', 'v', self.V_source_range_comboBox.currentText() )
+        self.smu.set_measure_range('a', 'v', self.V_source_range_comboBox.currentText() )
         
     def set_I_constant_current(self, I_constant_current):
         self.smu.set_source_level('a', 'i', I_constant_current/1e+3)
