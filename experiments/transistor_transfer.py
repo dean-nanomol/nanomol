@@ -55,13 +55,14 @@ class transistor_transfer(interactive_ui):
         self.set_curve_loop()
         self.measurement_is_running = False  # flag to start and stop a measurement
     
-    def start_measurement(self, data_path=None):
+    def start_measurement(self, *args, data_path=None):
         """
         data_path : hdf5 group [optional, default=None]
             hdf5 group where data of the measurement will be saved. Useful when calling externally to save data in
             specific hdf5 group of an existing file. If data_path is not provided (e.g. executing from ui button)
             default to saving in root group of class datafile.
         """
+        # *args captures unnecessary arguments passed by qt buttons
         if data_path is not None:
             self.data_path = data_path
         else:
