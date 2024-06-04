@@ -18,13 +18,16 @@ from nanomol.instruments.optosigma_GSC_01 import optosigma_GSC_01, optosigma_GSC
 from nanomol.utils.interactive_ui import interactive_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
 from nanomol.utils.hdf5_viewer import hdf5_viewer
+from nanomol.experiments.transistor_transfer import transistor_transfer
 
 class transistor_laser_scan(interactive_ui):
     
-    def __init__(self, stage_X, stage_Y):
+    def __init__(self, stage_X, stage_Y, datafile, transistor_transfer):
         super().__init__()
         self.stage_X = stage_X
         self.stage_Y = stage_Y
+        self.datafile = datafile
+        self.transfer = transistor_transfer
         ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_laser_scan.ui')
         uic.loadUi(ui_file_path, self)
         self.connect_widgets_by_name()
@@ -56,12 +59,14 @@ class transistor_laser_scan(interactive_ui):
             grid_Y_scan_stop = round(self.grid_Y_start - (self.num_Y_points-1)*self.grid_Y_step, ndigits=3)
         self.grid_X_points = np.linspace(self.grid_X_start, grid_X_scan_stop, num = self.num_X_points)
         self.grid_Y_points = np.linspace(self.grid_Y_start, grid_Y_scan_stop, num = self.num_Y_points)
-        for position_Y in self.grid_Y_points:
-            self.stage_Y.move_absolute(position_Y)
+        self.save_scan_attrs()
+        for self.position_Y in self.grid_Y_points:
+            self.stage_Y.move_absolute(self.position_Y)
             self.wait_for_motion_completed(self.stage_Y)
-            for position_X in self.grid_X_points:
-                self.stage_X.move_absolute(position_X)
+            for self.position_X in self.grid_X_points:
+                self.stage_X.move_absolute(self.position_X)
                 self.wait_for_motion_completed(self.stage_X)
+                self.measure_grid_point()
                 time.sleep(0.2)
                 if not self.grid_scan_is_running:
                     break
@@ -94,7 +99,18 @@ class transistor_laser_scan(interactive_ui):
         self.configure_XY_grid()
         num_grid_points = self.num_X_points * self.num_Y_points
         self.grid_num_points_lineEdit.setText('{} x {} = {}'.format(self.num_X_points, self.num_Y_points, num_grid_points))
+    
+    def measure_grid_point(self):
+        point_label = 'point_X{:.3f}_Y{:.3f}'.format(self.position_X, self.position_Y)
+        self.active_point_group = self.active_scan_group.create_group(point_label)
+        self.transfer.start_measurement(data_path=self.active_point_group)
+        self.transfer.measurement_thread.join()
+        print('X: {}, Y: {}'.format(self.stage_X.position(), self.stage_Y.position()))
         
+    def save_scan_attrs(self):
+        scan_label = self.datafile.get_unique_group_name(self.datafile, basename='scan', max_N=100)
+        self.active_scan_group = self.datafile.create_group(scan_label)
+    
     def wait_for_motion_completed(self, stage):
         while stage.is_moving():
             time.sleep(0.01)
@@ -102,21 +118,26 @@ class transistor_laser_scan(interactive_ui):
 
 if __name__ == '__main__' :
     
-    #smu = keithley_2600A('USB0::0x05E6::0x2604::4101847::INSTR')
+    datafile = hdf5_datafile(mode='x')
+    smu = keithley_2600A('USB0::0x05E6::0x2604::4101847::INSTR')
     stage_X = newport_CONEX_MFA_CC('COM5')
     stage_Y = newport_CONEX_MFA_CC('COM6')
     stage_Z = optosigma_GSC_01('COM1')
     
     ui_app = QtWidgets.QApplication([])
     
-    #smu_ui = keithley_2600A_ui(smu)
+    datafile_viewer = hdf5_viewer(datafile)
+    smu_ui = keithley_2600A_ui(smu)
     stage_XY_ui = newport_CONEX_MFA_CC_XY_ui(stage_X, stage_Y)
     stage_Z_ui = optosigma_GSC_01_ui(stage_Z)
-    scan_ui = transistor_laser_scan(stage_X, stage_Y)
+    transistor_transfer_ui = transistor_transfer(smu, datafile=datafile)
+    scan_ui = transistor_laser_scan(stage_X, stage_Y, datafile, transistor_transfer_ui)
     
-    #smu_ui.show()
+    datafile_viewer.show()
+    smu_ui.show()
     stage_XY_ui.show()
     stage_Z_ui.show()
+    transistor_transfer_ui.show()
     scan_ui.show()
     
     ui_app.exec()
