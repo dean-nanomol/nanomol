@@ -130,7 +130,7 @@ if __name__ == '__main__' :
     smu_ui = keithley_2600A_ui(smu)
     stage_XY_ui = newport_CONEX_MFA_CC_XY_ui(stage_X, stage_Y)
     stage_Z_ui = optosigma_GSC_01_ui(stage_Z)
-    transistor_transfer_ui = transistor_transfer(smu, datafile=datafile)
+    transistor_transfer_ui = transistor_transfer(smu)
     scan_ui = transistor_laser_scan(stage_X, stage_Y, datafile, transistor_transfer_ui)
     
     datafile_viewer.show()
