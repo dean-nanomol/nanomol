@@ -72,8 +72,8 @@ class transistor_transfer(interactive_ui):
                 self.data_path = None
         if not self.measurement_is_running:  # do nothing if measurement is already running
             self.measurement_is_running = True
-            measurement_thread = threading.Thread(target=self.run_measurement)
-            measurement_thread.start()
+            self.measurement_thread = threading.Thread(target=self.run_measurement)
+            self.measurement_thread.start()
             
     def stop_measurement(self):
         if self.measurement_is_running:
@@ -89,7 +89,7 @@ class transistor_transfer(interactive_ui):
         self.smu.set_output(self.V1_ch, 1)
         for self.measurement_counter in range(self.N_measurements):
             for self.V1_active in self.V1:
-                if self.save_data_checkBox.isChecked():
+                if self.data_path is not None:
                     self.save_curve_attrs()
                 # reset curve datasets for new curve
                 self.initialise_datasets()
@@ -126,7 +126,7 @@ class transistor_transfer(interactive_ui):
                     if self.delay_points != 0:
                         time.sleep(self.delay_points)
                 self.smu.set_output(self.V2_ch, 0)
-                if self.save_data_checkBox.isChecked():
+                if self.data_path is not None:
                     self.save_data()
                 if not self.measurement_is_running:
                     break
@@ -163,7 +163,7 @@ class transistor_transfer(interactive_ui):
         if self.curve_loop:
             self.V2 = np.append(self.V2, np.flip(self.V2) )
         # save measurement settings and attributes
-        if self.save_data_checkBox.isChecked():
+        if self.data_path is not None:
             self.save_sweep_attrs()
     
     def initialise_datasets(self):
@@ -173,7 +173,7 @@ class transistor_transfer(interactive_ui):
             self.data[label] = []
             
     def save_sweep_attrs(self):
-        active_sweep_name = self.data_path.get_unique_group_name(self.data_path, basename=self.description, max_N=1000)
+        active_sweep_name = self.data_path.file.get_unique_group_name(self.data_path, basename=self.description, max_N=1000)
         self.active_sweep_group =  self.data_path.create_group(active_sweep_name)
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
@@ -185,7 +185,7 @@ class transistor_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def save_curve_attrs(self):
-        active_curve_name = self.data_path.get_unique_group_name(self.active_sweep_group, basename='curve')
+        active_curve_name = self.data_path.file.get_unique_group_name(self.active_sweep_group, basename='curve')
         self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_curve_group.attrs.create('timestamp', timestamp )
