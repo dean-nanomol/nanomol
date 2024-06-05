@@ -29,7 +29,7 @@ class transistor_transfer(interactive_ui):
     def __init__(self, smu,  datafile=None):
         super().__init__()
         if datafile is not None:
-            self.datafile = datafile
+            self.default_datafile = datafile
         self.smu = smu
         ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_transfer.ui')
         uic.loadUi(ui_file_path, self)
@@ -55,7 +55,8 @@ class transistor_transfer(interactive_ui):
         self.set_curve_loop()
         self.measurement_is_running = False  # flag to start and stop a measurement
     
-    def start_measurement(self, *args, data_path=None):
+    def start_measurement(self, *args, datafile=None, data_path=None):
+        # TODO: sort out docs
         """
         data_path : hdf5 group [optional, default=None]
             hdf5 group where data of the measurement will be saved. Useful when calling externally to save data in
@@ -64,9 +65,11 @@ class transistor_transfer(interactive_ui):
         """
         # *args captures unnecessary arguments passed by qt buttons
         if data_path is not None:
-            self.data_path = data_path
+            self.datafile = datafile
+            self.data_path = datafile[data_path]
         else:
             if self.save_data_checkBox.isChecked():
+                self.datafile = self.default_datafile
                 self.data_path = self.datafile
             else:
                 self.data_path = None
@@ -173,7 +176,7 @@ class transistor_transfer(interactive_ui):
             self.data[label] = []
             
     def save_sweep_attrs(self):
-        active_sweep_name = self.data_path.file.get_unique_group_name(self.data_path, basename=self.description, max_N=1000)
+        active_sweep_name = self.datafile.get_unique_group_name(self.data_path, basename=self.description, max_N=1000)
         self.active_sweep_group =  self.data_path.create_group(active_sweep_name)
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
@@ -185,7 +188,8 @@ class transistor_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def save_curve_attrs(self):
-        active_curve_name = self.data_path.file.get_unique_group_name(self.active_sweep_group, basename='curve')
+        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve', max_N=100)
+        #active_curve_name = 'curve_001'
         self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_curve_group.attrs.create('timestamp', timestamp )
