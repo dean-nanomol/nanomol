@@ -7,6 +7,7 @@ Created on Thu Jun 15 10:24:22 2023
 
 import numpy as np
 import h5py
+import time
 import datetime
 from tkinter import Tk, filedialog
 
@@ -92,6 +93,14 @@ class hdf5_datafile(h5py.File):
             counter += 1
         else:
             self.get_unique_dataset_name(parent_group, basename=basename, max_N=max_N*10)
+    
+    def timestamp(self):
+        """
+        Returns
+        timestamp : str
+            timestamp with date and time down to seconds
+        """
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
 
 
 if __name__ == '__main__' :
