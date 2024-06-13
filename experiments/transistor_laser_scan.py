@@ -9,7 +9,6 @@ import numpy as np
 import threading
 import time
 import os
-import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
@@ -51,6 +50,38 @@ class transistor_laser_scan(interactive_ui):
     
     def run_grid_scan(self):
         self.configure_XY_grid()
+        self.save_scan_attrs()
+        self.MCLS1.system_enable = 1
+        self.MCLS1.channel = 2
+        self.MCLS1.enable = 1
+        time.sleep(5)
+        self.point_counter = 1
+        self.t0 = time.time()
+        for self.position_Y in self.grid_Y_points:
+            self.stage_Y.move_absolute(self.position_Y)
+            self.wait_for_motion_completed(self.stage_Y)
+            for self.position_X in self.grid_X_points:
+                self.stage_X.move_absolute(self.position_X)
+                self.wait_for_motion_completed(self.stage_X)
+                self.measure_grid_point()
+                self.point_counter += 1
+                if not self.grid_scan_is_running:
+                    break
+            if not self.grid_scan_is_running:
+                break
+        self.grid_scan_is_running = False
+        self.datafile.flush()
+        self.MCLS1.enable = 0
+        self.MCLS1.system_enable = 0
+        
+    def configure_XY_grid(self):
+        # Configure grid with steps and start/stop points from ui.
+        # -(a // -b) emulates ceiling function. If endpoint falls beteween grid points, extend grid to contain it.
+        # round() used to eliminate rounding errors when subtracting start/stop coordinates.
+        num_X_steps = -(abs(round(self.grid_X_stop - self.grid_X_start, ndigits=3)) // -self.grid_X_step)
+        self.num_X_points = int(num_X_steps) +1
+        num_Y_steps = -(abs(round(self.grid_Y_stop - self.grid_Y_start, ndigits=3)) // -self.grid_Y_step)
+        self.num_Y_points = int(num_Y_steps) +1
         if self.grid_X_stop >= self.grid_X_start:
             grid_X_scan_stop = round(self.grid_X_start + (self.num_X_points-1)*self.grid_X_step, ndigits=3)
         else:
@@ -61,28 +92,6 @@ class transistor_laser_scan(interactive_ui):
             grid_Y_scan_stop = round(self.grid_Y_start - (self.num_Y_points-1)*self.grid_Y_step, ndigits=3)
         self.grid_X_points = np.linspace(self.grid_X_start, grid_X_scan_stop, num = self.num_X_points)
         self.grid_Y_points = np.linspace(self.grid_Y_start, grid_Y_scan_stop, num = self.num_Y_points)
-        self.save_scan_attrs()
-        for self.position_Y in self.grid_Y_points:
-            self.stage_Y.move_absolute(self.position_Y)
-            self.wait_for_motion_completed(self.stage_Y)
-            for self.position_X in self.grid_X_points:
-                self.stage_X.move_absolute(self.position_X)
-                self.wait_for_motion_completed(self.stage_X)
-                self.measure_grid_point()
-                if not self.grid_scan_is_running:
-                    break
-            if not self.grid_scan_is_running:
-                break
-        self.grid_scan_is_running = False
-        
-    def configure_XY_grid(self):
-        # Configure grid with steps and start/stop points from ui.
-        # -(a // -b) emulates ceiling function. If endpoint falls beteween grid points, extend grid to contain it.
-        # round() used to eliminate rounding errors when subtracting start/stop coordinates.
-        num_X_steps = -(abs(round(self.grid_X_stop - self.grid_X_start, ndigits=3)) // -self.grid_X_step)
-        self.num_X_points = int(num_X_steps) +1
-        num_Y_steps = -(abs(round(self.grid_Y_stop - self.grid_Y_start, ndigits=3)) // -self.grid_Y_step)
-        self.num_Y_points = int(num_Y_steps) +1
     
     def current_position_as_start(self):
         position_X = round(self.stage_X.position(), ndigits=3)
@@ -98,29 +107,43 @@ class transistor_laser_scan(interactive_ui):
         
     def calculate_number_grid_points(self):
         self.configure_XY_grid()
-        num_grid_points = self.num_X_points * self.num_Y_points
-        self.grid_num_points_lineEdit.setText('{} x {} = {}'.format(self.num_X_points, self.num_Y_points, num_grid_points))
+        self.num_grid_points = self.num_X_points * self.num_Y_points
+        self.grid_num_points_lineEdit.setText('{} x {} = {}'.format(self.num_X_points, self.num_Y_points, self.num_grid_points))
     
     def measure_grid_point(self):
         point_label = 'point_X{:.3f}_Y{:.3f}'.format(self.position_X, self.position_Y)
         self.active_point_group = self.active_scan_group.create_group(point_label)
         self.laserON_group = self.active_point_group.create_group('laser_ON')
         self.laserON_group.attrs.create('laser_ON', 1)
-        self.save_laser_attrs(self.laserON_group)
         self.transfer.start_measurement(datafile=self.datafile, path=self.laserON_group.name)
         self.transfer.measurement_thread.join()
+        self.active_point_group.attrs.create('X', self.stage_X.position())
+        self.active_point_group.attrs.create('Y', self.stage_Y.position())
         self.laserOFF_group = self.active_point_group.create_group('laser_OFF')
         self.laserOFF_group.attrs.create('laser_ON', 0)
-        self.stage_X.move_absolute(self.grid_X_start -0.05)
+        self.stage_X.move_absolute(self.grid_X_start -0.1)
+        self.stage_Y.move_absolute(self.grid_Y_start -0.1)
         self.wait_for_motion_completed(self.stage_X)
+        self.wait_for_motion_completed(self.stage_Y)
         self.transfer.start_measurement(datafile=self.datafile, path=self.laserOFF_group.name)
         self.transfer.measurement_thread.join()
         self.stage_X.move_absolute(self.position_X)
+        self.stage_Y.move_absolute(self.position_Y)
         self.wait_for_motion_completed(self.stage_X)
+        self.wait_for_motion_completed(self.stage_Y)
+        self.update_progress()
         
     def save_scan_attrs(self):
-        scan_label = self.datafile.get_unique_group_name(self.datafile, basename='scan', max_N=99)
+        scan_label = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=99)
         self.active_scan_group = self.datafile.create_group(scan_label)
+        scan_attrs = {}
+        scan_attrs['description'] = self.description
+        scan_attrs['timestamp'] = self.datafile.timestamp()
+        scan_attrs['grid_X_points'] = self.grid_X_points
+        scan_attrs['grid_Y_points'] = self.grid_Y_points
+        for attr, value in scan_attrs.items():
+            self.active_scan_group.attrs.create(attr, value)
+        self.save_laser_attrs(self.active_scan_group)
     
     def save_laser_attrs(self, data_group):
         laser_attrs = {}
@@ -132,10 +155,26 @@ class transistor_laser_scan(interactive_ui):
         for attr, value in laser_attrs.items():
             data_group.attrs.create(attr, value)
         
+    def update_progress(self):
+        elapsed_s = int( time.time() - self.t0 )
+        elapsed_min = elapsed_s // 60
+        elapsed_h, elapsed_min = divmod(elapsed_min, 60)
+        time_per_point = elapsed_s / self.point_counter
+        remaining_s = int( (self.num_grid_points - self.point_counter) * time_per_point )
+        remaining_min = remaining_s // 60
+        remaining_h, remaining_min = divmod(remaining_min, 60)
+        self.progress_lineEdit.setText('point {}/{}, elapsed: {}h {}m, remaining: {}h {}m'.format(
+                                                            self.point_counter, self.num_grid_points,
+                                                            elapsed_h, elapsed_min,
+                                                            remaining_h, remaining_min) )
     
     def wait_for_motion_completed(self, stage):
         while stage.is_moving():
             time.sleep(0.01)
+    
+    def shutdown(self):
+        if not self.grid_scan_is_running:
+            self.datafile.close()
             
 
 if __name__ == '__main__' :
