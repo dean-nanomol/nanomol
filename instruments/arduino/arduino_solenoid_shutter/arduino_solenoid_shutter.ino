@@ -1,6 +1,21 @@
 /*
+Arduino controller for solenoid actuated shutters.
+Assign a digital pin to each shutter to control corresponding MOSFET gate.
+
 Available commands:
-[describe available commands here]
+
+status?
+    returns state of shutters, 0: closed, 1: open
+
+open,P
+  P : int
+    shutter (digital pin) number
+  opens shutter connected to pin P
+
+close,P
+  P : int
+    shutter (digital pin) number
+  close shutter connected to pin P
 */
 
 bool new_command_is_ready = false;
@@ -13,10 +28,10 @@ char input_command[max_command_length];
 // variables for command parsing
 char command_type[max_command_length];
 char shutter_index[5];
-byte selected_shutter = 0;
 
 // shutter pin assignment
 const byte shutter_635nm_pin = 2;
+byte selected_shutter = shutter_635nm_pin;
 
 void setup() {
   Serial.begin(115200);
@@ -28,7 +43,8 @@ void loop() {
   if (new_command_is_ready) {
       // identify command and react
       if (strcmp(input_command, "status?") == 0) {
-        Serial.println(input_command);
+        // return state of selected shutter
+        Serial.println(digitalRead(selected_shutter));
       }
       else {
         parse_command();
@@ -39,10 +55,7 @@ void loop() {
           close_shutter(selected_shutter);
         }
       }
-      selected_shutter = 0;
-  }
-    
-
+  } 
   // clear any unused commands, e.g. unrecognised commands
     new_command_is_ready = false;
 }
@@ -70,7 +83,8 @@ void read_command() {
 }
 
 void parse_command() {
-  char * strtok_index;  // strtok returns pointer to first substring before delimiter ','
+  // parse input_command for command type followed by selected shutter, separated by delimiter ","
+  char * strtok_index;  // strtok returns pointer to first substring before delimiter ","
   strtok_index = strtok(input_command, ",");
   strcpy(command_type, strtok_index);
   strtok_index = strtok(NULL, ",");
@@ -79,12 +93,8 @@ void parse_command() {
 
 void open_shutter(byte shutter_pin) {
   digitalWrite(shutter_pin, HIGH);
-  Serial.print("open pin: ");
-  Serial.println(shutter_pin);
 }
 
 void close_shutter(byte shutter_pin) {
   digitalWrite(shutter_pin, LOW);
-  Serial.print("close pin: ");
-  Serial.println(shutter_pin);
 }
