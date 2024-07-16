@@ -26,7 +26,7 @@ class transistor_output(interactive_ui):
     
     update_plots_signal = pyqtSignal()
     
-    def __init__(self,smu,  datafile=None):
+    def __init__(self, smu,  datafile=None):
         super().__init__()
         if datafile is not None:
             self.datafile = datafile

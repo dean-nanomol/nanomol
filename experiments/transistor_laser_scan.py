@@ -10,11 +10,11 @@ import threading
 import time
 import os
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.instruments.newport_CONEX_MFA_CC import newport_CONEX_MFA_CC, newport_CONEX_MFA_CC_XY_ui
 from nanomol.instruments.optosigma_GSC_01 import optosigma_GSC_01, optosigma_GSC_01_ui
 from nanomol.instruments.thorlabs_MCLS1 import thorlabs_MCLS1, thorlabs_MCLS1_ui
+from nanomol.instruments.arduino_shutter_controller import arduino_shutter_controller, arduino_shutter_controller_ui
 from nanomol.utils.interactive_ui import interactive_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
 from nanomol.utils.hdf5_viewer import hdf5_viewer
@@ -22,11 +22,13 @@ from nanomol.experiments.transistor_transfer import transistor_transfer
 
 class transistor_laser_scan(interactive_ui):
     
-    def __init__(self, stage_X, stage_Y, MCLS1, datafile, transistor_transfer ):
+    def __init__(self, stage_X, stage_Y, MCLS1, shutter_controller, datafile, transistor_transfer ):
         super().__init__()
         self.stage_X = stage_X
         self.stage_Y = stage_Y
         self.MCLS1 = MCLS1
+        self.shutter_controller = shutter_controller
+        self.shutter_pin_635nm = 2
         self.datafile = datafile
         self.transfer = transistor_transfer
         ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_laser_scan.ui')
@@ -113,24 +115,21 @@ class transistor_laser_scan(interactive_ui):
     def measure_grid_point(self):
         point_label = 'point_X{:.3f}_Y{:.3f}'.format(self.position_X, self.position_Y)
         self.active_point_group = self.active_scan_group.create_group(point_label)
-        self.laserON_group = self.active_point_group.create_group('laser_ON')
-        self.laserON_group.attrs.create('laser_ON', 1)
-        self.transfer.start_measurement(datafile=self.datafile, path=self.laserON_group.name)
-        self.transfer.measurement_thread.join()
-        self.active_point_group.attrs.create('X', self.stage_X.position())
-        self.active_point_group.attrs.create('Y', self.stage_Y.position())
+        self.shutter_controller.close_shutter(self.shutter_pin_635nm)
         self.laserOFF_group = self.active_point_group.create_group('laser_OFF')
         self.laserOFF_group.attrs.create('laser_ON', 0)
-        self.stage_X.move_absolute(self.grid_X_start -0.1)
-        self.stage_Y.move_absolute(self.grid_Y_start -0.1)
-        self.wait_for_motion_completed(self.stage_X)
-        self.wait_for_motion_completed(self.stage_Y)
+        self.laserOFF_group.attrs.create('shutter_state', self.shutter_controller.status())
         self.transfer.start_measurement(datafile=self.datafile, path=self.laserOFF_group.name)
         self.transfer.measurement_thread.join()
-        self.stage_X.move_absolute(self.position_X)
-        self.stage_Y.move_absolute(self.position_Y)
-        self.wait_for_motion_completed(self.stage_X)
-        self.wait_for_motion_completed(self.stage_Y)
+        self.shutter_controller.open_shutter(self.shutter_pin_635nm)
+        self.laserON_group = self.active_point_group.create_group('laser_ON')
+        self.laserON_group.attrs.create('laser_ON', 1)
+        self.laserON_group.attrs.create('shutter_state', self.shutter_controller.status())
+        self.transfer.start_measurement(datafile=self.datafile, path=self.laserON_group.name)
+        self.transfer.measurement_thread.join()
+        self.shutter_controller.close_shutter(self.shutter_pin_635nm)
+        self.active_point_group.attrs.create('X', self.stage_X.position())
+        self.active_point_group.attrs.create('Y', self.stage_Y.position())
         self.update_progress()
         
     def save_scan_attrs(self):
@@ -185,6 +184,7 @@ if __name__ == '__main__' :
     stage_Y = newport_CONEX_MFA_CC('COM6')
     stage_Z = optosigma_GSC_01('COM1')
     MCLS1 = thorlabs_MCLS1('COM4')
+    shutter_controller = arduino_shutter_controller('COM7')
     
     ui_app = QtWidgets.QApplication([])
     
@@ -193,14 +193,16 @@ if __name__ == '__main__' :
     stage_XY_ui = newport_CONEX_MFA_CC_XY_ui(stage_X, stage_Y)
     stage_Z_ui = optosigma_GSC_01_ui(stage_Z)
     MCLS1_ui = thorlabs_MCLS1_ui(MCLS1)
+    shutter_controller_ui = arduino_shutter_controller_ui(shutter_controller)
     transistor_transfer_ui = transistor_transfer(smu, datafile)
-    scan_ui = transistor_laser_scan(stage_X, stage_Y, MCLS1, datafile, transistor_transfer_ui)
+    scan_ui = transistor_laser_scan(stage_X, stage_Y, MCLS1, shutter_controller, datafile, transistor_transfer_ui)
     
     datafile_viewer.show()
     smu_ui.show()
     stage_XY_ui.show()
     stage_Z_ui.show()
     MCLS1_ui.show()
+    shutter_controller_ui.show()
     transistor_transfer_ui.show()
     scan_ui.show()
     
