@@ -131,6 +131,7 @@ class transistor_laser_scan(interactive_ui):
         self.active_point_group.attrs.create('X', self.stage_X.position())
         self.active_point_group.attrs.create('Y', self.stage_Y.position())
         self.update_progress()
+        time.sleep(self.shutter_cooling_delay)
         
     def save_scan_attrs(self):
         scan_label = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=99)
