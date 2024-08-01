@@ -11,8 +11,9 @@ import h5py
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from nanomol.utils.interactive_ui import interactive_ui
 
-class hdf5_viewer(QtWidgets.QWidget):
+class hdf5_viewer(interactive_ui):
     
     def __init__(self, datafile):
         super().__init__()
@@ -20,7 +21,10 @@ class hdf5_viewer(QtWidgets.QWidget):
         ui_file_path = os.path.join(os.path.dirname(__file__), 'hdf5_viewer.ui')
         uic.loadUi(ui_file_path, self)
         self.initialise_plot()
+        self.connect_widgets_by_name()
         self.reload_datafile_pushbutton.clicked.connect(self.reload_datafile)
+        self.modifier_X_comboBox.currentTextChanged.connect(self.update_data_toPlot_X)
+        self.modifier_Y_comboBox.currentTextChanged.connect(self.update_data_toPlot_Y)
         self.reload_datafile()
         self.data_Y_toPlot = []
         self.data_X_toPlot = []
@@ -87,7 +91,9 @@ class hdf5_viewer(QtWidgets.QWidget):
                 datafile_item = datafile_item[datafile_key]
             if isinstance(datafile_item, h5py.Dataset):
                 # only append to data for plotting if datafile item is a dataset
-                self.data_Y_toPlot.append(np.array(datafile_item) )
+                data_to_plot = self.apply_data_modifier(np.array(datafile_item), self.modifier_Y)
+                print('applied modifier: ', self.modifier_Y)
+                self.data_Y_toPlot.append(data_to_plot)
                 self.data_plot_labels.append(data_label)
             if i==(len(selected_indices)-1):
                 # show dataset/group attributes for last selected item
@@ -114,7 +120,9 @@ class hdf5_viewer(QtWidgets.QWidget):
                 datafile_item = datafile_item[datafile_key]
             if isinstance(datafile_item, h5py.Dataset):
                 # only append to data for plotting if datafile item is a dataset
-                self.data_X_toPlot.append(np.array(datafile_item) )
+                data_to_plot = self.apply_data_modifier(np.array(datafile_item), self.modifier_X)
+                print('applied modifier: ', self.modifier_X)
+                self.data_X_toPlot.append(data_to_plot)
             self.item_for_attrs_view = datafile_item
             self.load_attributes(self.item_for_attrs_view)
             self.update_plot()
@@ -151,6 +159,20 @@ class hdf5_viewer(QtWidgets.QWidget):
             return True
         else:
             return False
+        
+    def apply_data_modifier(self, dataset, modifier):
+        if modifier == 'none':
+            return dataset
+        elif modifier == 'abs(x)':
+            return abs(dataset)
+        elif modifier == 'sqrt(x)':
+            return dataset**0.5
+        elif modifier == 'sqrt(abs(x))':
+            return abs(dataset)**0.5
+        elif modifier == 'log10(x)':
+            return np.log10(dataset)
+        elif modifier == 'log10(abs(x))':
+            return np.log10(abs(dataset))
         
     def reload_datafile(self):
         self.load_datafile_tree()
