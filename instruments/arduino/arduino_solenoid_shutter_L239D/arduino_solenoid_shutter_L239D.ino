@@ -46,10 +46,12 @@ const byte shutter_635nm_enable_pin = 2;
 const byte shutter_635nm_input1_pin = 4;
 const byte shutter_635nm_input2_pin = 3;
 byte selected_shutter = shutter_635nm_enable_pin;
-bool shutter_635nm_state = 0;
 
 // solenoid energized duration
 const int energize_time = 100;
+
+// shutter state variables
+bool shutter_635nm_state;
 
 void setup() {
   Serial.begin(115200);
@@ -66,7 +68,7 @@ void loop() {
       // identify command and react
       if (strcmp(input_command, "status?") == 0) {
         // return state of selected shutter
-        Serial.println(digitalRead(selected_shutter));
+        Serial.println(shutter_635nm_state);
       }
       else {
         parse_command();
@@ -125,6 +127,7 @@ void open_shutter(byte shutter_pin) {
     digitalWrite(shutter_635nm_input1_pin, HIGH);
     delay(energize_time);
     digitalWrite(shutter_635nm_input1_pin, LOW);
+    shutter_635nm_state = 1;
   }
 }
 
@@ -134,6 +137,7 @@ void close_shutter(byte shutter_pin) {
     digitalWrite(shutter_635nm_input2_pin, HIGH);
     delay(energize_time);
     digitalWrite(shutter_635nm_input2_pin, LOW);
+    shutter_635nm_state = 0;
   }
 }
 
