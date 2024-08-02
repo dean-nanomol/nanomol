@@ -21,19 +21,25 @@ class arduino_shutter_controller(serial_instrument):
                     'timeout': 1 }
         termination = '\n'
         super().__init__(port=port, port_settings=settings, termination_character=termination)
-    
-    def open_shutter(self, shutter_pin):
+        
+    def enable_shutter(self, shutter_pin):
         """
         shutter_pin : int
             Arduino digital pin connected to the shutter to be opened
         """
+        self.write('enable,{:d}'.format(shutter_pin))
+        
+    def disable_shutter(self, shutter_pin):
+        """
+        shutter_pin : int
+            Arduino digital pin connected to the shutter to be opened
+        """
+        self.write('disable,{:d}'.format(shutter_pin))
+    
+    def open_shutter(self, shutter_pin):
         self.write('open,{:d}'.format(shutter_pin))
     
     def close_shutter(self, shutter_pin):
-        """
-        shutter_pin : int
-            Arduino digital pin connected to the shutter to be opened
-        """
         self.write('close,{:d}'.format(shutter_pin))
     
     def status(self):
