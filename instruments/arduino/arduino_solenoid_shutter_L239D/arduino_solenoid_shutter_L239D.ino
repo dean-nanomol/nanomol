@@ -1,6 +1,7 @@
 /*
 Arduino controller for solenoid actuated shutters.
 Assign a digital pin to each shutter to control corresponding 'enable' pin of L239D.
+All shutters are enabled by default on startup.
 
 Available commands:
 
@@ -16,6 +17,17 @@ close,P
   P : int
     shutter (digital pin) number
   close shutter connected to pin P
+
+enable,P
+  P : int
+    shutter (digital pin) number
+  enable operation of shutter connected to pin P
+
+disable,P
+  P : int
+    shutter (digital pin) number
+  disable operation of shutter connected to pin P
+
 */
 
 bool new_command_is_ready = false;
