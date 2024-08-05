@@ -92,7 +92,6 @@ class hdf5_viewer(interactive_ui):
             if isinstance(datafile_item, h5py.Dataset):
                 # only append to data for plotting if datafile item is a dataset
                 data_to_plot = self.apply_data_modifier(np.array(datafile_item), self.modifier_Y)
-                print('applied modifier: ', self.modifier_Y)
                 self.data_Y_toPlot.append(data_to_plot)
                 self.data_plot_labels.append(data_label)
             if i==(len(selected_indices)-1):
@@ -121,7 +120,6 @@ class hdf5_viewer(interactive_ui):
             if isinstance(datafile_item, h5py.Dataset):
                 # only append to data for plotting if datafile item is a dataset
                 data_to_plot = self.apply_data_modifier(np.array(datafile_item), self.modifier_X)
-                print('applied modifier: ', self.modifier_X)
                 self.data_X_toPlot.append(data_to_plot)
             self.item_for_attrs_view = datafile_item
             self.load_attributes(self.item_for_attrs_view)
