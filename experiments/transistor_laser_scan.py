@@ -52,11 +52,11 @@ class transistor_laser_scan(interactive_ui):
     
     def run_grid_scan(self):
         self.configure_XY_grid()
-        self.save_scan_attrs()
         self.MCLS1.system_enable = 1
         self.MCLS1.channel = 2
         self.MCLS1.enable = 1
         time.sleep(5)
+        self.save_scan_attrs()
         self.point_counter = 1
         self.t0 = time.time()
         for self.position_Y in self.grid_Y_points:
@@ -115,6 +115,8 @@ class transistor_laser_scan(interactive_ui):
     def measure_grid_point(self):
         point_label = 'point_X{:.3f}_Y{:.3f}'.format(self.position_X, self.position_Y)
         self.active_point_group = self.active_scan_group.create_group(point_label)
+        self.active_point_group.attrs.create('X_nominal', self.position_X)
+        self.active_point_group.attrs.create('Y_nominal', self.position_Y)
         self.shutter_controller.close_shutter(self.shutter_pin_635nm)
         self.laserOFF_group = self.active_point_group.create_group('laser_OFF')
         self.laserOFF_group.attrs.create('laser_ON', 0)
@@ -128,8 +130,8 @@ class transistor_laser_scan(interactive_ui):
         self.transfer.start_measurement(datafile=self.datafile, path=self.laserON_group.name)
         self.transfer.measurement_thread.join()
         self.shutter_controller.close_shutter(self.shutter_pin_635nm)
-        self.active_point_group.attrs.create('X', self.stage_X.position())
-        self.active_point_group.attrs.create('Y', self.stage_Y.position())
+        self.active_point_group.attrs.create('X_measured', self.stage_X.position())
+        self.active_point_group.attrs.create('Y_measured', self.stage_Y.position())
         self.update_progress()
         time.sleep(self.shutter_cooling_delay)
         
