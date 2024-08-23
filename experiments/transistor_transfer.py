@@ -138,6 +138,8 @@ class transistor_transfer(interactive_ui):
                     break
                 if self.delay_curves != 0:
                     time.sleep(self.delay_curves)
+            if not self.measurement_is_running:
+                break
         self.smu.set_output(self.V1_ch, 0)
         self.measurement_is_running = False
             
