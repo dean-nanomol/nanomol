@@ -36,6 +36,8 @@ class transistor_laser_scan(interactive_ui):
         self.connect_widgets_by_name()
         self.start_grid_scan_pushButton.clicked.connect(self.start_grid_scan)
         self.stop_grid_scan_pushButton.clicked.connect(self.stop_grid_scan)
+        self.start_parameter_sweep_pushButton.clicked.connect(self.start_parameter_sweep)
+        self.stop_parameter_sweep_pushButton.clicked.connect(self.stop_parameter_sweep)
         self.current_position_as_start_pushButton.clicked.connect(self.current_position_as_start)
         self.current_position_as_stop_pushButton.clicked.connect(self.current_position_as_stop)
         self.calculate_number_grid_points_pushButton.clicked.connect(self.calculate_number_grid_points)
@@ -56,7 +58,6 @@ class transistor_laser_scan(interactive_ui):
         self.MCLS1.system_enable = 1
         self.MCLS1.channel = 2
         self.MCLS1.enable = 1
-        time.sleep(5)
         self.save_scan_attrs()
         self.point_counter = 1
         self.t0 = time.time()
@@ -74,8 +75,9 @@ class transistor_laser_scan(interactive_ui):
                 break
         self.grid_scan_is_running = False
         self.datafile.flush()
-        self.MCLS1.enable = 0
-        self.MCLS1.system_enable = 0
+        if not self.parameter_sweep_is_running:
+            self.MCLS1.enable = 0
+            self.MCLS1.system_enable = 0
     
     def start_parameter_sweep(self):
         if not self.parameter_sweep_is_running:
@@ -84,10 +86,29 @@ class transistor_laser_scan(interactive_ui):
             self.parameter_sweep_thread.start()
     
     def run_parameter_sweep(self):
-        
+        self.configure_parameter_sweep()
+        for param_value in self.param_sweep_values:
+            if self.param_sweep_laser_current_radioButton.isChecked():
+                self.MCLS1.channel = 2
+                self.MCLS1.current = param_value
+            self.start_grid_scan()
+            self.grid_scan_thread.join()
+            if not self.parameter_sweep_is_running:
+                break
+        self.parameter_sweep_is_running = False
+        self.MCLS1.enable = 0
+        self.MCLS1.system_enable = 0
+    
+    def stop_parameter_sweep(self):
+        self.parameter_sweep_is_running = False
     
     def configure_parameter_sweep(self):
-        num_param_steps = 
+        if self.param_sweep_laser_current_radioButton.isChecked():
+            param_sweep_start = self.param_sweep_laser_current_start
+            param_sweep_stop = self.param_sweep_laser_current_stop
+            param_sweep_N_points = self.param_sweep_laser_current_N_points
+            param_sweep_values = np.linspace(param_sweep_start, param_sweep_stop, num=param_sweep_N_points)
+            self.param_sweep_values = np.round(param_sweep_values, decimals=2)
         
     def configure_XY_grid(self):
         # Configure grid with steps and start/stop points from ui.

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>411</width>
-    <height>445</height>
+    <width>404</width>
+    <height>364</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -387,19 +387,12 @@
       <string>parameter sweep</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="1" column="0">
-       <widget class="QRadioButton" name="radioButton_2">
-        <property name="text">
-         <string>RadioButton</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_12">
+      <item row="0" column="3">
+       <layout class="QHBoxLayout" name="horizontalLayout_14">
         <item>
-         <widget class="QLabel" name="label_11">
+         <widget class="QLabel" name="label_13">
           <property name="text">
-           <string>start</string>
+           <string>N points</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -407,18 +400,24 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="param_sweep_laser_current_start_doubleSpinBox">
+         <widget class="QSpinBox" name="param_sweep_laser_current_N_points_spinBox">
+          <property name="minimum">
+           <number>1</number>
+          </property>
           <property name="value">
-           <double>48.500000000000000</double>
+           <number>5</number>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item row="0" column="0">
-       <widget class="QRadioButton" name="scan_param_sweep_laser_current_radioButton">
+       <widget class="QRadioButton" name="param_sweep_laser_current_radioButton">
         <property name="text">
          <string>laser current [mA]</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -443,12 +442,12 @@
         </item>
        </layout>
       </item>
-      <item row="0" column="3">
-       <layout class="QHBoxLayout" name="horizontalLayout_14">
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_12">
         <item>
-         <widget class="QLabel" name="label_13">
+         <widget class="QLabel" name="label_11">
           <property name="text">
-           <string>step</string>
+           <string>start</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -456,9 +455,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="param_sweep_laser_current_step_doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="param_sweep_laser_current_start_doubleSpinBox">
           <property name="value">
-           <double>5.000000000000000</double>
+           <double>48.500000000000000</double>
           </property>
          </widget>
         </item>
@@ -470,16 +469,16 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_15">
      <item>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="start_parameter_sweep_pushButton">
        <property name="text">
-        <string>start scan parameter sweep</string>
+        <string>start parameter sweep</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_3">
+      <widget class="QPushButton" name="stop_parameter_sweep_pushButton">
        <property name="text">
-        <string>stop scan parameter sweep</string>
+        <string>stop parameter sweep</string>
        </property>
       </widget>
      </item>
