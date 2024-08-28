@@ -40,12 +40,13 @@ class transistor_laser_scan(interactive_ui):
         self.current_position_as_stop_pushButton.clicked.connect(self.current_position_as_stop)
         self.calculate_number_grid_points_pushButton.clicked.connect(self.calculate_number_grid_points)
         self.grid_scan_is_running = False
+        self.parameter_sweep_is_running = False
         
     def start_grid_scan(self):
         if not self.grid_scan_is_running:  # do nothing if measurement is already running
             self.grid_scan_is_running = True
-            grid_scan_thread = threading.Thread(target=self.run_grid_scan)
-            grid_scan_thread.start()
+            self.grid_scan_thread = threading.Thread(target=self.run_grid_scan)
+            self.grid_scan_thread.start()
     
     def stop_grid_scan(self):
         self.grid_scan_is_running = False
@@ -75,6 +76,18 @@ class transistor_laser_scan(interactive_ui):
         self.datafile.flush()
         self.MCLS1.enable = 0
         self.MCLS1.system_enable = 0
+    
+    def start_parameter_sweep(self):
+        if not self.parameter_sweep_is_running:
+            self.parameter_sweep_is_running = True
+            self.parameter_sweep_thread = threading.Thread(target=self.run_parameter_sweep)
+            self.parameter_sweep_thread.start()
+    
+    def run_parameter_sweep(self):
+        
+    
+    def configure_parameter_sweep(self):
+        num_param_steps = 
         
     def configure_XY_grid(self):
         # Configure grid with steps and start/stop points from ui.
@@ -133,7 +146,6 @@ class transistor_laser_scan(interactive_ui):
         self.active_point_group.attrs.create('X_measured', self.stage_X.position())
         self.active_point_group.attrs.create('Y_measured', self.stage_Y.position())
         self.update_progress()
-        time.sleep(self.shutter_cooling_delay)
         
     def save_scan_attrs(self):
         scan_label = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=99)
