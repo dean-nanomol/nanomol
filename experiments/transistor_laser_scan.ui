@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>404</width>
-    <height>364</height>
+    <width>528</width>
+    <height>465</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -387,6 +387,37 @@
       <string>parameter sweep</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_12">
+        <item>
+         <widget class="QLabel" name="label_11">
+          <property name="text">
+           <string>start</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="param_sweep_laser_current_start_doubleSpinBox">
+          <property name="value">
+           <double>48.500000000000000</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="param_sweep_laser_current_radioButton">
+        <property name="text">
+         <string>laser current [mA]</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="3">
        <layout class="QHBoxLayout" name="horizontalLayout_14">
         <item>
@@ -402,7 +433,7 @@
         <item>
          <widget class="QSpinBox" name="param_sweep_laser_current_N_points_spinBox">
           <property name="minimum">
-           <number>1</number>
+           <number>2</number>
           </property>
           <property name="value">
            <number>5</number>
@@ -410,16 +441,6 @@
          </widget>
         </item>
        </layout>
-      </item>
-      <item row="0" column="0">
-       <widget class="QRadioButton" name="param_sweep_laser_current_radioButton">
-        <property name="text">
-         <string>laser current [mA]</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
       </item>
       <item row="0" column="2">
        <layout class="QHBoxLayout" name="horizontalLayout_13">
@@ -442,10 +463,17 @@
         </item>
        </layout>
       </item>
-      <item row="0" column="1">
-       <layout class="QHBoxLayout" name="horizontalLayout_12">
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="param_sweep_delay_curves_radioButton">
+        <property name="text">
+         <string>delay between curves [s]</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_16">
         <item>
-         <widget class="QLabel" name="label_11">
+         <widget class="QLabel" name="label_14">
           <property name="text">
            <string>start</string>
           </property>
@@ -455,9 +483,60 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="param_sweep_laser_current_start_doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="param_sweep_delay_curves_start_doubleSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>999.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="2">
+       <layout class="QHBoxLayout" name="horizontalLayout_17">
+        <item>
+         <widget class="QLabel" name="label_15">
+          <property name="text">
+           <string>stop</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="param_sweep_delay_curves_stop_doubleSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>999.000000000000000</double>
+          </property>
           <property name="value">
-           <double>48.500000000000000</double>
+           <double>30.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="3">
+       <layout class="QHBoxLayout" name="horizontalLayout_18">
+        <item>
+         <widget class="QLabel" name="label_16">
+          <property name="text">
+           <string>N points</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="param_sweep_delay_curves_N_points_spinBox">
+          <property name="minimum">
+           <number>2</number>
           </property>
          </widget>
         </item>
