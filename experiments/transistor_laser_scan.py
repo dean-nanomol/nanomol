@@ -71,6 +71,8 @@ class transistor_laser_scan(interactive_ui):
                 self.point_counter += 1
                 if not self.grid_scan_is_running:
                     break
+                if self.delay_grid != 0:
+                    time.sleep(self.delay_grid)
             if not self.grid_scan_is_running:
                 break
         self.grid_scan_is_running = False
@@ -91,6 +93,8 @@ class transistor_laser_scan(interactive_ui):
             if self.param_sweep_laser_current_radioButton.isChecked():
                 self.MCLS1.channel = 2
                 self.MCLS1.current = param_value
+            elif self.param_sweep_delay_grid_radioButton.isChecked():
+                self.delay_grid_doubleSpinBox.setValue(param_value)
             self.start_grid_scan()
             self.grid_scan_thread.join()
             if not self.parameter_sweep_is_running:
@@ -109,6 +113,12 @@ class transistor_laser_scan(interactive_ui):
             param_sweep_N_points = self.param_sweep_laser_current_N_points
             param_sweep_values = np.linspace(param_sweep_start, param_sweep_stop, num=param_sweep_N_points)
             self.param_sweep_values = np.round(param_sweep_values, decimals=2)
+        elif self.param_sweep_delay_curves_radioButton.isChecked():
+            param_sweep_start = self.param_sweep_delay_grid_start
+            param_sweep_stop = self.param_sweep_delay_grid_stop
+            param_sweep_N_points = self.param_sweep_delay_grid_N_points
+            param_sweep_values = np.linspace(param_sweep_start, param_sweep_stop, num=param_sweep_N_points)
+            self.param_sweep_values = np.round(param_sweep_values, decimals=1)
         
     def configure_XY_grid(self):
         # Configure grid with steps and start/stop points from ui.

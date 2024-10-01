@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>528</width>
-    <height>465</height>
+    <width>524</width>
+    <height>552</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -346,6 +346,40 @@
     </widget>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_19">
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_17">
+       <property name="text">
+        <string>delay between grid points [s]</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="delay_grid_doubleSpinBox">
+       <property name="decimals">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <double>9999.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout_11">
      <item>
       <widget class="QLabel" name="label_10">
@@ -464,7 +498,7 @@
        </layout>
       </item>
       <item row="1" column="0">
-       <widget class="QRadioButton" name="param_sweep_delay_curves_radioButton">
+       <widget class="QRadioButton" name="param_sweep_delay_grid_radioButton">
         <property name="text">
          <string>delay between curves [s]</string>
         </property>
@@ -483,12 +517,15 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="param_sweep_delay_curves_start_doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="param_sweep_delay_grid_start_doubleSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
           <property name="maximum">
            <double>999.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>30.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -507,7 +544,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="param_sweep_delay_curves_stop_doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="param_sweep_delay_grid_stop_doubleSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -515,7 +552,7 @@
            <double>999.000000000000000</double>
           </property>
           <property name="value">
-           <double>30.000000000000000</double>
+           <double>0.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -534,7 +571,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="param_sweep_delay_curves_N_points_spinBox">
+         <widget class="QSpinBox" name="param_sweep_delay_grid_N_points_spinBox">
           <property name="minimum">
            <number>2</number>
           </property>
