@@ -114,11 +114,10 @@ class transistor_laser_scan(interactive_ui):
             param_sweep_values = np.linspace(param_sweep_start, param_sweep_stop, num=param_sweep_N_points)
             self.param_sweep_values = np.round(param_sweep_values, decimals=2)
         elif self.param_sweep_delay_grid_radioButton.isChecked():
-            param_sweep_start = self.param_sweep_delay_grid_start
-            param_sweep_stop = self.param_sweep_delay_grid_stop
-            param_sweep_N_points = self.param_sweep_delay_grid_N_points
-            param_sweep_values = np.linspace(param_sweep_start, param_sweep_stop, num=param_sweep_N_points)
-            self.param_sweep_values = np.round(param_sweep_values, decimals=1)
+            # parse comma separated string into delay values
+            parsed_values = self.param_sweep_delay_grid.split(',')
+            parsed_values = [float(value.strip()) for value in parsed_values]
+            self.param_sweep_values = np.round(parsed_values, decimals=1)
         
     def configure_XY_grid(self):
         # Configure grid with steps and start/stop points from ui.
