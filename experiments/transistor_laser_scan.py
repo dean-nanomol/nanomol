@@ -113,7 +113,7 @@ class transistor_laser_scan(interactive_ui):
             param_sweep_N_points = self.param_sweep_laser_current_N_points
             param_sweep_values = np.linspace(param_sweep_start, param_sweep_stop, num=param_sweep_N_points)
             self.param_sweep_values = np.round(param_sweep_values, decimals=2)
-        elif self.param_sweep_delay_curves_radioButton.isChecked():
+        elif self.param_sweep_delay_grid_radioButton.isChecked():
             param_sweep_start = self.param_sweep_delay_grid_start
             param_sweep_stop = self.param_sweep_delay_grid_stop
             param_sweep_N_points = self.param_sweep_delay_grid_N_points
@@ -186,6 +186,7 @@ class transistor_laser_scan(interactive_ui):
         scan_attrs['timestamp'] = self.datafile.timestamp()
         scan_attrs['grid_X_points'] = self.grid_X_points
         scan_attrs['grid_Y_points'] = self.grid_Y_points
+        scan_attrs['delay_grid'] = self.delay_grid
         for attr, value in scan_attrs.items():
             self.active_scan_group.attrs.create(attr, value)
         self.save_laser_attrs(self.active_scan_group)
