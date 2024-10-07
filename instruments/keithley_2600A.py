@@ -238,6 +238,22 @@ class keithley_2600A(visa_instrument):
             self.write(command)
         self.write('endscript')
         
+    def generate_linear_iv_sweep_script(sweep_ch, start_V, end_V, step_V, loop=False, secondary_ch=None):
+        N_points = round( (end_V - start_V) / step_V ) +1
+        script = []
+        if secondary_ch is not None:
+            script.extend(
+                ['smu{}.nvbuffer1.clear()'.format(secondary_ch),
+                 'smu{}.nvbuffer2.clear()'.format(secondary_ch),
+                 'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(secondary_ch, secondary_ch, secondary_ch)
+                 ])
+        script.extend(
+                ['smu{}.nvbuffer1.clear()'.format(sweep_ch),
+                 'smu{}.nvbuffer2.clear()'.format(sweep_ch),
+                 'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(sweep_ch, sweep_ch, sweep_ch),
+                 'smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, start_V, end_V, N_points)
+                 ])
+    
 
 class keithley_2600A_ui(QtWidgets.QWidget):
     """
