@@ -238,21 +238,84 @@ class keithley_2600A(visa_instrument):
             self.write(command)
         self.write('endscript')
         
+    def run_script(self, script_name=None):
+        """
+        script_name : str, optional
+            Name assigned to script in instrument runtime environment. If None, run the anonymous script.
+        """
+        if script_name is not None:
+            self.write('{}.run()'.format(script_name))
+        else:
+            self.write('run()')
+        
     def generate_linear_iv_sweep_script(sweep_ch, start_V, end_V, step_V, loop=False, secondary_ch=None):
+        """
+        sweep_ch : str
+            channel, 'a' or 'b', where the sweep runs
+        start_V : float
+            sweep start voltage in V
+        end_V : float
+            sweep end voltage in V
+        step_V : float
+            sweep step in V
+        loop : bool, optional
+            if True, also runs the inverse sweep to do a loop sweep. The default is False.
+        secondary_ch : str, optional
+            channel, 'a' or 'b'. If given, records i and v measurements on this secondary channel in addition to those
+            of sweep channel. secondary_ch should be different from sweep_ch. The default is None.
+
+        Returns
+        script : list of str
+            List of TSP commands for a linear i-v sweep.
+        """
         N_points = round( (end_V - start_V) / step_V ) +1
         script = []
         if secondary_ch is not None:
             script.extend(
                 ['smu{}.nvbuffer1.clear()'.format(secondary_ch),
                  'smu{}.nvbuffer2.clear()'.format(secondary_ch),
-                 'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(secondary_ch, secondary_ch, secondary_ch)
+                 'smu{}.nvbuffer1.appendmode = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer2.appendmode = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer1.collectsourcevalues = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer1.collecttimestamps = 1'.format(secondary_ch),
+                 'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(secondary_ch, secondary_ch, secondary_ch),
+                 'smu{}.trigger.measure.action = 1'.format(secondary_ch),
+                 'smu{}.trigger.count = {}'.format(secondary_ch, N_points)
                  ])
         script.extend(
                 ['smu{}.nvbuffer1.clear()'.format(sweep_ch),
                  'smu{}.nvbuffer2.clear()'.format(sweep_ch),
+                 'smu{}.nvbuffer1.appendmode = 1'.format(sweep_ch),
+                 'smu{}.nvbuffer2.appendmode = 1'.format(sweep_ch),
+                 'smu{}.nvbuffer1.collectsourcevalues = 1'.format(sweep_ch),
+                 'smu{}.nvbuffer1.collecttimestamps = 1'.format(sweep_ch),
                  'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(sweep_ch, sweep_ch, sweep_ch),
-                 'smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, start_V, end_V, N_points)
+                 'smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, start_V, end_V, N_points),
+                 'smu{}.trigger.measure.action = 1'.format(sweep_ch),
+                 'smu{}.trigger.count = {}'.format(sweep_ch, N_points)
                  ])
+        if loop:
+            # if running a loop, maintain source voltage at the end of the forward sweep
+            script.append('smu{}.trigger.endsweep.action = smu{}.SOURCE_HOLD'.format(sweep_ch, sweep_ch))
+        else:
+            # otherwise, turn it off
+            script.append('smu{}.trigger.endsweep.action = smu{}.SOURCE_IDLE'.format(sweep_ch, sweep_ch))
+        script.extend(
+                ['smu{}.trigger.initiate()'.format(sweep_ch),
+                 'waitcomplete()'
+                 ])
+        if loop:
+            # execute another sweep with inverted start_V and end_V
+            script.extend(
+                ['smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, end_V, start_V, N_points),
+                 'smu{}.trigger.initiate()'.format(sweep_ch),
+                 'waitcomplete()'
+                 ])
+        return script
+    
+    def read_buffer(self, buffer_name, data_types):
+        # TODO
+        pass
     
 
 class keithley_2600A_ui(QtWidgets.QWidget):
