@@ -6,6 +6,7 @@ Created on Wed Aug 16 14:47:39 2023
 """
 
 import os
+import numpy as np
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.visa_instrument import visa_instrument
 
@@ -314,8 +315,38 @@ class keithley_2600A(visa_instrument):
         return script
     
     def read_buffer(self, buffer_name, data_types):
-        # TODO
-        pass
+        """
+        buffer_name : str
+            name of the buffer to be read, for example smua.nvbuffer1
+        data_types : list of str
+            reading buffer subtables to be read. Must include one or more of the following:
+                'readings' : measured values
+                'statuses' : equipment status for each reading
+                'sourcevalues' : source value being output when readings were acquired
+                'sourcestatuses' : source status condition for each reading
+                'timestamps' : timestamp for each reading, in absolute instrument time
+                'relativetimestamps' : timestamp for each reading, relative to time of first point in buffer
+                'sourceunits' : units of measure of the source
+                'units' : units of measure of the readings
+                
+        Returns
+        data_dict : dict
+            dictionary keys are the data_types
+        """
+        data_size = len(data_types)
+        data_buffers = ['{}.'.format(buffer_name) + d_type for d_type in data_types]
+        data_buffers = ', '.join(data_buffers)
+        buffer_content = self.query('printbuffer(1, {}.n, {}'.format(buffer_name, data_buffers) )
+        # instrument returns consecutive list of all data, with metadata immediately following each reading value
+        data_dict = {}
+        for i, d_type in enumerate(data_types):
+            # take one item from list every data_size items to get all data of the same type
+            data = buffer_content[i::data_size]
+            if d_type in ['readings', 'sourcevalues', 'timestamps', 'relativetimestamps']:
+                data_dict[d_type] = np.array(data, dtype=float)
+            else:
+                data_dict[d_type] = data
+        return data_dict
     
 
 class keithley_2600A_ui(QtWidgets.QWidget):
