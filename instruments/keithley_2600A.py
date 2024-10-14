@@ -249,7 +249,7 @@ class keithley_2600A(visa_instrument):
         else:
             self.write('run()')
         
-    def generate_linear_iv_sweep_script(sweep_ch, start_V, end_V, step_V, loop=False, secondary_ch=None):
+    def generate_linear_iv_sweep_script(self, sweep_ch, start_V, end_V, step_V, loop=False, secondary_ch=None):
         """
         sweep_ch : str
             channel, 'a' or 'b', where the sweep runs
@@ -271,18 +271,6 @@ class keithley_2600A(visa_instrument):
         """
         N_points = round( (end_V - start_V) / step_V ) +1
         script = []
-        if secondary_ch is not None:
-            script.extend(
-                ['smu{}.nvbuffer1.clear()'.format(secondary_ch),
-                 'smu{}.nvbuffer2.clear()'.format(secondary_ch),
-                 'smu{}.nvbuffer1.appendmode = 1'.format(secondary_ch),
-                 'smu{}.nvbuffer2.appendmode = 1'.format(secondary_ch),
-                 'smu{}.nvbuffer1.collectsourcevalues = 1'.format(secondary_ch),
-                 'smu{}.nvbuffer1.collecttimestamps = 1'.format(secondary_ch),
-                 'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(secondary_ch, secondary_ch, secondary_ch),
-                 'smu{}.trigger.measure.action = 1'.format(secondary_ch),
-                 'smu{}.trigger.count = {}'.format(secondary_ch, N_points)
-                 ])
         script.extend(
                 ['smu{}.nvbuffer1.clear()'.format(sweep_ch),
                  'smu{}.nvbuffer2.clear()'.format(sweep_ch),
@@ -292,8 +280,22 @@ class keithley_2600A(visa_instrument):
                  'smu{}.nvbuffer1.collecttimestamps = 1'.format(sweep_ch),
                  'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(sweep_ch, sweep_ch, sweep_ch),
                  'smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, start_V, end_V, N_points),
+                 'smu{}.trigger.source.action = 1'.format(sweep_ch),
                  'smu{}.trigger.measure.action = 1'.format(sweep_ch),
                  'smu{}.trigger.count = {}'.format(sweep_ch, N_points)
+                 ])
+        if secondary_ch is not None:
+            script.extend(
+                ['smu{}.nvbuffer1.clear()'.format(secondary_ch),
+                 'smu{}.nvbuffer2.clear()'.format(secondary_ch),
+                 'smu{}.nvbuffer1.appendmode = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer2.appendmode = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer1.collectsourcevalues = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer1.collecttimestamps = 1'.format(secondary_ch),
+                 'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(secondary_ch, secondary_ch, secondary_ch),
+                 #'smu{}.trigger.measure.action = 1'.format(secondary_ch),
+                 'smu{}.trigger.measure.stimulus = smu{}.trigger.SOURCE_COMPLETE_EVENT_ID'.format(secondary_ch, sweep_ch),
+                 #'smu{}.trigger.count = {}'.format(secondary_ch, N_points)
                  ])
         if loop:
             # if running a loop, maintain source voltage at the end of the forward sweep
@@ -301,8 +303,11 @@ class keithley_2600A(visa_instrument):
         else:
             # otherwise, turn it off
             script.append('smu{}.trigger.endsweep.action = smu{}.SOURCE_IDLE'.format(sweep_ch, sweep_ch))
+        if secondary_ch is not None:
+            script.append('smu{}.source.output = 1'.format(secondary_ch))
         script.extend(
-                ['smu{}.trigger.initiate()'.format(sweep_ch),
+                ['smu{}.source.output = 1'.format(sweep_ch),
+                 'smu{}.trigger.initiate()'.format(sweep_ch),
                  'waitcomplete()'
                  ])
         if loop:
@@ -312,6 +317,9 @@ class keithley_2600A(visa_instrument):
                  'smu{}.trigger.initiate()'.format(sweep_ch),
                  'waitcomplete()'
                  ])
+        script.append('smu{}.source.output = 0'.format(sweep_ch))
+        if secondary_ch is not None:
+            script.append('smu{}.source.output = 0'.format(secondary_ch))
         return script
     
     def read_buffer(self, buffer_name, data_types):
@@ -336,7 +344,7 @@ class keithley_2600A(visa_instrument):
         data_size = len(data_types)
         data_buffers = ['{}.'.format(buffer_name) + d_type for d_type in data_types]
         data_buffers = ', '.join(data_buffers)
-        buffer_content = self.query('printbuffer(1, {}.n, {}'.format(buffer_name, data_buffers) )
+        buffer_content = self.query('printbuffer(1, {}.n, {})'.format(buffer_name, data_buffers) )
         # instrument returns consecutive list of all data, with metadata immediately following each reading value
         data_dict = {}
         for i, d_type in enumerate(data_types):
@@ -426,7 +434,8 @@ class keithley_2600A_ui(QtWidgets.QWidget):
     
 if __name__ == '__main__' :
     
-    myKeithley = keithley_2600A(address = 'GPIB0::27::INSTR')
+    #myKeithley = keithley_2600A(address = 'GPIB0::27::INSTR')
+    myKeithley = keithley_2600A(address = 'USB0::0x05E6::0x2604::4101847::INSTR')
     
     ui_app = QtWidgets.QApplication([])
     ui = keithley_2600A_ui(myKeithley)
