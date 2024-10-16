@@ -277,7 +277,9 @@ class keithley_2600A(visa_instrument):
                  'smu{}.nvbuffer1.appendmode = 1'.format(sweep_ch),
                  'smu{}.nvbuffer2.appendmode = 1'.format(sweep_ch),
                  'smu{}.nvbuffer1.collectsourcevalues = 1'.format(sweep_ch),
+                 'smu{}.nvbuffer2.collectsourcevalues = 1'.format(sweep_ch),
                  'smu{}.nvbuffer1.collecttimestamps = 1'.format(sweep_ch),
+                 'smu{}.nvbuffer2.collecttimestamps = 1'.format(sweep_ch),
                  'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(sweep_ch, sweep_ch, sweep_ch),
                  'smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, start_V, end_V, N_points),
                  'smu{}.trigger.source.action = 1'.format(sweep_ch),
@@ -291,11 +293,13 @@ class keithley_2600A(visa_instrument):
                  'smu{}.nvbuffer1.appendmode = 1'.format(secondary_ch),
                  'smu{}.nvbuffer2.appendmode = 1'.format(secondary_ch),
                  'smu{}.nvbuffer1.collectsourcevalues = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer2.collectsourcevalues = 1'.format(secondary_ch),
                  'smu{}.nvbuffer1.collecttimestamps = 1'.format(secondary_ch),
+                 'smu{}.nvbuffer2.collecttimestamps = 1'.format(secondary_ch),
                  'smu{}.trigger.measure.iv(smu{}.nvbuffer1, smu{}.nvbuffer2)'.format(secondary_ch, secondary_ch, secondary_ch),
-                 #'smu{}.trigger.measure.action = 1'.format(secondary_ch),
+                 'smu{}.trigger.measure.action = 1'.format(secondary_ch),
                  'smu{}.trigger.measure.stimulus = smu{}.trigger.SOURCE_COMPLETE_EVENT_ID'.format(secondary_ch, sweep_ch),
-                 #'smu{}.trigger.count = {}'.format(secondary_ch, N_points)
+                 'smu{}.trigger.count = {}'.format(secondary_ch, N_points)
                  ])
         if loop:
             # if running a loop, maintain source voltage at the end of the forward sweep
@@ -304,7 +308,10 @@ class keithley_2600A(visa_instrument):
             # otherwise, turn it off
             script.append('smu{}.trigger.endsweep.action = smu{}.SOURCE_IDLE'.format(sweep_ch, sweep_ch))
         if secondary_ch is not None:
-            script.append('smu{}.source.output = 1'.format(secondary_ch))
+            script.extend(
+                ['smu{}.source.output = 1'.format(secondary_ch),
+                 'smu{}.trigger.initiate()'.format(secondary_ch),
+                 ])
         script.extend(
                 ['smu{}.source.output = 1'.format(sweep_ch),
                  'smu{}.trigger.initiate()'.format(sweep_ch),
@@ -331,11 +338,7 @@ class keithley_2600A(visa_instrument):
                 'readings' : measured values
                 'statuses' : equipment status for each reading
                 'sourcevalues' : source value being output when readings were acquired
-                'sourcestatuses' : source status condition for each reading
-                'timestamps' : timestamp for each reading, in absolute instrument time
-                'relativetimestamps' : timestamp for each reading, relative to time of first point in buffer
-                'sourceunits' : units of measure of the source
-                'units' : units of measure of the readings
+                'timestamps' : timestamp for each reading, relative to time of first reading
                 
         Returns
         data_dict : dict
@@ -345,15 +348,14 @@ class keithley_2600A(visa_instrument):
         data_buffers = ['{}.'.format(buffer_name) + d_type for d_type in data_types]
         data_buffers = ', '.join(data_buffers)
         buffer_content = self.query('printbuffer(1, {}.n, {})'.format(buffer_name, data_buffers) )
+        # split instrument reply into list of str values
+        buffer_content = buffer_content.split(', ')
         # instrument returns consecutive list of all data, with metadata immediately following each reading value
         data_dict = {}
         for i, d_type in enumerate(data_types):
             # take one item from list every data_size items to get all data of the same type
             data = buffer_content[i::data_size]
-            if d_type in ['readings', 'sourcevalues', 'timestamps', 'relativetimestamps']:
-                data_dict[d_type] = np.array(data, dtype=float)
-            else:
-                data_dict[d_type] = data
+            data_dict[d_type] = np.array(data, dtype=float)
         return data_dict
     
 
