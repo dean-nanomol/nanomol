@@ -78,7 +78,10 @@ class transistor_transfer(interactive_ui):
                 self.data_path = None
         if not self.measurement_is_running:  # do nothing if measurement is already running
             self.measurement_is_running = True
-            self.measurement_thread = threading.Thread(target=self.run_measurement)
+            if self.real_time_measurement_radioButton.isChecked():
+                self.measurement_thread = threading.Thread(target=self.run_measurement)
+            elif self.scripted_measurement_radioButton.isChecked():
+                self.measurement_thread = threading.Thread(target=self.run_scripted_measurement)
             self.measurement_thread.start()
             
     def stop_measurement(self):
@@ -194,7 +197,6 @@ class transistor_transfer(interactive_ui):
     
     def save_curve_attrs(self):
         active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve', max_N=100)
-        #active_curve_name = 'curve_001'
         self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_curve_group.attrs.create('timestamp', timestamp )
@@ -209,6 +211,48 @@ class transistor_transfer(interactive_ui):
                 data -= data[0]
             self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
         self.data_path.file.flush()
+    
+    def run_scripted_measurement(self):
+        self.configure_scripted_measurement()
+        for self.measurement_counter in range(self.N_measurements):
+            for self.V1_active in self.V1:
+                self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+                self.smu.run_script(self.transfer_script_label)
+                self.save_smu_buffer_data()
+                if not self.measurement_is_running:
+                    break
+            if not self.measurement_is_running:
+                break
+    
+    def configure_scripted_measurement(self):
+        self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
+        self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
+        transfer_script = self.smu.generate_linear_iv_sweep_script(self.V2_ch,
+                                                                   self.V_GS_min_transfer,
+                                                                   self.V_GS_max_transfer,
+                                                                   self.V_GS_step_transfer,
+                                                                   loop=self.curve_loop,
+                                                                   secondary_ch=self.V1_ch)
+        self.transfer_script_label = 'transfer_script'
+        self.smu.load_script(transfer_script, script_name=self.transfer_script_label)
+        self.save_sweep_attrs()
+    
+    def save_smu_buffer_data(self):
+        self.save_curve_attrs()
+        data_types = ['readings', 'sourcevalues', 'timestamps']
+        DS_I_buffer = self.smu.read_buffer('smu{}.nvbuffer1'.format(self.ch_DS), data_types)
+        GS_I_buffer = self.smu.read_buffer('smu{}.nvbuffer1'.format(self.ch_GS), data_types)
+        data_types = ['readings']
+        DS_V_buffer = self.smu.read_buffer('smu{}.nvbuffer2'.format(self.ch_DS), data_types)
+        GS_V_buffer = self.smu.read_buffer('smu{}.nvbuffer2'.format(self.ch_GS), data_types)
+        self.data = {'time' : GS_I_buffer['timestamps'],
+                'measured_I_DS' : DS_I_buffer['readings'],
+                'measured_V_DS' : DS_V_buffer['readings'],
+                'measured_I_GS' : GS_I_buffer['readings'],
+                'measured_V_GS' : GS_V_buffer['readings'],
+                'calculated_V_DS' : DS_I_buffer['sourcevalues'],
+                'calculated_V_GS' : GS_I_buffer['sourcevalues']}
+        self.save_data()
     
     def set_measurement_mode(self):
         self.measurement_mode = 'transfer'
