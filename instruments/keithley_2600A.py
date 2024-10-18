@@ -310,12 +310,13 @@ class keithley_2600A(visa_instrument):
         if secondary_ch is not None:
             script.extend(
                 ['smu{}.source.output = 1'.format(secondary_ch),
-                 'smu{}.trigger.initiate()'.format(secondary_ch),
+                 'smu{}.trigger.initiate()'.format(secondary_ch)
                  ])
         script.extend(
                 ['smu{}.source.output = 1'.format(sweep_ch),
                  'smu{}.trigger.initiate()'.format(sweep_ch),
-                 'waitcomplete()'
+                 'waitcomplete()',
+                 'print(status.operation.sweeping.condition)',
                  ])
         if loop:
             # execute another sweep with inverted start_V and end_V
