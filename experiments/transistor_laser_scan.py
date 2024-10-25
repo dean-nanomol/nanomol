@@ -55,12 +55,14 @@ class transistor_laser_scan(interactive_ui):
     
     def run_grid_scan(self):
         self.configure_XY_grid()
+        self.configure_scan_direction()
         self.MCLS1.system_enable = 1
         self.MCLS1.channel = 2
         self.MCLS1.enable = 1
         self.save_scan_attrs()
         self.point_counter = 1
         self.t0 = time.time()
+        # TODO implement scan directions in loops
         for self.position_Y in self.grid_Y_points:
             self.stage_Y.move_absolute(self.position_Y)
             self.wait_for_motion_completed(self.stage_Y)
@@ -137,6 +139,18 @@ class transistor_laser_scan(interactive_ui):
             grid_Y_scan_stop = round(self.grid_Y_start - (self.num_Y_points-1)*self.grid_Y_step, ndigits=3)
         self.grid_X_points = np.linspace(self.grid_X_start, grid_X_scan_stop, num = self.num_X_points)
         self.grid_Y_points = np.linspace(self.grid_Y_start, grid_Y_scan_stop, num = self.num_Y_points)
+    
+    def configure_scan_direction(self):
+        if self.scan_direction_left_right_radioButton.isChecked():
+            self.primary_axis_stage = self.stage_Y
+            self.primary_axis_points = self.grid_Y_points
+            self.secondary_axis_stage = self.stage_X
+            self.secondary_axis_points = self.grid_X_points
+        elif self.scan_direction_up_down_radioButton.isChecked():
+            self.primary_axis_stage = self.stage_X
+            self.primary_axis_points = self.grid_X_points
+            self.secondary_axis_stage = self.stage_Y
+            self.secondary_axis_points = self.grid_Y_points
     
     def current_position_as_start(self):
         position_X = round(self.stage_X.position(), ndigits=3)

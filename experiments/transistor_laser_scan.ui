@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>457</width>
-    <height>418</height>
+    <height>474</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -347,6 +347,36 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_19">
+     <item>
+      <widget class="QGroupBox" name="groupBox_3">
+       <property name="title">
+        <string>scan direction</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_16">
+        <item>
+         <widget class="QRadioButton" name="scan_direction_left_right_radioButton">
+          <property name="text">
+           <string>───┐
+┌──┘
+└──&gt;</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="scan_direction_up_down_radioButton">
+          <property name="text">
+           <string>│┌┐
+│││
+└┘V</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item>
       <spacer name="horizontalSpacer_2">
        <property name="orientation">
