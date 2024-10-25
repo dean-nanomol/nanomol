@@ -7,6 +7,7 @@ Created on Wed Aug 16 14:47:39 2023
 
 import os
 import numpy as np
+import pyvisa
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.visa_instrument import visa_instrument
 
@@ -272,7 +273,12 @@ class keithley_2600A(visa_instrument):
         N_points = round( (end_V - start_V) / step_V ) +1
         script = []
         script.extend(
-                ['smu{}.nvbuffer1.clear()'.format(sweep_ch),
+                ['status.reset()',
+                 # enables use of the Standard Event Status Register bit triggered by opc()
+                 'status.standard.enable = status.standard.OPERATION_COMPLETE',
+                 # sends a service request when an event occurs in the Standard Event Status Register
+                 'status.request_enable = status.EVENT_SUMMARY_BIT',
+                 'smu{}.nvbuffer1.clear()'.format(sweep_ch),
                  'smu{}.nvbuffer2.clear()'.format(sweep_ch),
                  'smu{}.nvbuffer1.appendmode = 1'.format(sweep_ch),
                  'smu{}.nvbuffer2.appendmode = 1'.format(sweep_ch),
@@ -314,15 +320,18 @@ class keithley_2600A(visa_instrument):
                  ])
         script.extend(
                 ['smu{}.source.output = 1'.format(sweep_ch),
-                 'smu{}.trigger.initiate()'.format(sweep_ch),
-                 'waitcomplete()',
-                 'print(status.operation.sweeping.condition)',
+                 'smu{}.trigger.initiate()'.format(sweep_ch)
                  ])
+        if not loop:
+            # opc() sets the operation complete bit in the Standard Event Status Register after waitcomplete()
+            script.append('opc()')
+        script.append('waitcomplete()')
         if loop:
             # execute another sweep with inverted start_V and end_V
             script.extend(
                 ['smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, end_V, start_V, N_points),
                  'smu{}.trigger.initiate()'.format(sweep_ch),
+                 'opc()',
                  'waitcomplete()'
                  ])
         script.append('smu{}.source.output = 0'.format(sweep_ch))
@@ -358,6 +367,22 @@ class keithley_2600A(visa_instrument):
             data = buffer_content[i::data_size]
             data_dict[d_type] = np.array(data, dtype=float)
         return data_dict
+ 
+    # TODO rearrange into a wait_for_sweep_completed function
+    def test_event(self):
+        self.event_type = pyvisa.constants.EventType.service_request
+        self.event_mech = pyvisa.constants.EventMechanism.queue
+        self.instrument.enable_event(self.event_type, self.event_mech)
+        self.run_script('myScript')
+        response = self.instrument.wait_on_event(self.event_type, 6000)
+        print('success')
+        self.instrument.disable_event(self.event_type, self.event_mech)
+    
+    # def wait_for_sweep_completed(self, query_interval=0.01):
+    #     sweep_state = self.write('print(status.operation.sweeping.condition)')
+    #     while True:
+    #         try:
+    #             self.read()
     
 
 class keithley_2600A_ui(QtWidgets.QWidget):
