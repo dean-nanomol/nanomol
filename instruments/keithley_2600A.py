@@ -249,6 +249,26 @@ class keithley_2600A(visa_instrument):
             self.write('{}.run()'.format(script_name))
         else:
             self.write('run()')
+    
+    def run_script_until_operation_complete(self, script_name='', timeout=60000):
+        """
+        Run script named script_name and wait until operation is completed and instrument is ready
+        to receive new commands, or until timeout has passed. The function waits for a service request
+        from the instrument, sent for example when the operation complete opc() command is executed.
+        
+        script_name : str, optional
+            script name as loaded into the instrument. Use load_script() first. The default is an empty
+            string, which will run the anonymous script.
+        timeout : int, optional
+            timeout time in ms. The default is 60000. Function will terminate after this time even if
+            a service request was not received. 
+        """
+        self.visa_event_type = pyvisa.constants.EventType.service_request
+        self.visa_event_mech = pyvisa.constants.EventMechanism.queue
+        self.instrument.enable_event(self.visa_event_type, self.visa_event_mech)
+        self.run_script(script_name)
+        self.instrument.wait_on_event(self.visa_event_type, timeout)
+        self.instrument.disable_event(self.visa_event_type, self.visa_event_mech)
         
     def generate_linear_iv_sweep_script(self, sweep_ch, start_V, end_V, step_V, loop=False, secondary_ch=None):
         """
@@ -367,23 +387,7 @@ class keithley_2600A(visa_instrument):
             data = buffer_content[i::data_size]
             data_dict[d_type] = np.array(data, dtype=float)
         return data_dict
- 
-    # TODO rearrange into a wait_for_sweep_completed function
-    def test_event(self):
-        self.event_type = pyvisa.constants.EventType.service_request
-        self.event_mech = pyvisa.constants.EventMechanism.queue
-        self.instrument.enable_event(self.event_type, self.event_mech)
-        self.run_script('myScript')
-        response = self.instrument.wait_on_event(self.event_type, 6000)
-        print('success')
-        self.instrument.disable_event(self.event_type, self.event_mech)
-    
-    # def wait_for_sweep_completed(self, query_interval=0.01):
-    #     sweep_state = self.write('print(status.operation.sweeping.condition)')
-    #     while True:
-    #         try:
-    #             self.read()
-    
+
 
 class keithley_2600A_ui(QtWidgets.QWidget):
     """
