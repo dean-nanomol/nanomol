@@ -41,12 +41,15 @@ class transistor_transfer(interactive_ui):
         self.sweep_loop_radioButton.clicked.connect(self.set_sweep_loop)
         self.curve_one_way_radioButton.clicked.connect(self.set_curve_loop)
         self.curve_loop_radioButton.clicked.connect(self.set_curve_loop)
+        self.smu_interaction_real_time_radioButton.clicked.connect(self.set_smu_interaction_mode)
+        self.smu_interaction_scripted_radioButton.clicked.connect(self.set_smu_interaction_mode)
         self.sweep_direction_positive_radioButton.clicked.connect(self.set_sweep_direction)
         self.sweep_direction_negative_radioButton.clicked.connect(self.set_sweep_direction)
         self.curve_direction_positive_radioButton.clicked.connect(self.set_curve_direction)
         self.curve_direction_negative_radioButton.clicked.connect(self.set_curve_direction)
         self.plot_widgets_set_up = False
         self.set_measurement_mode()
+        self.set_smu_interaction_mode()
         self.setup_plot_widgets()
         self.update_plots_signal.connect(self.update_plots)
         self.set_sweep_direction()  # sweep is the external loop, V1
@@ -78,9 +81,9 @@ class transistor_transfer(interactive_ui):
                 self.data_path = None
         if not self.measurement_is_running:  # do nothing if measurement is already running
             self.measurement_is_running = True
-            if self.real_time_measurement_radioButton.isChecked():
+            if self.smu_interaction_mode == 'real_time':
                 self.measurement_thread = threading.Thread(target=self.run_measurement)
-            elif self.scripted_measurement_radioButton.isChecked():
+            elif self.smu_interaction_mode == 'scripted':
                 self.measurement_thread = threading.Thread(target=self.run_scripted_measurement)
             self.measurement_thread.start()
             
@@ -190,6 +193,7 @@ class transistor_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
         self.active_sweep_group.attrs.create('GS_channel', self.ch_GS)
         self.active_sweep_group.attrs.create('DS_channel', self.ch_DS)
+        self.active_sweep_group.attrs.create('smu_interaction_mode', self.smu_interaction_mode)
         for key, value in self.smu.get_settings().items():
             self.active_sweep_group.attrs.create('keithley_{}'.format(key), value)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
@@ -216,21 +220,37 @@ class transistor_transfer(interactive_ui):
         self.configure_scripted_measurement()
         for self.measurement_counter in range(self.N_measurements):
             for self.V1_active in self.V1:
+                if self.first_point_delay != 0:
+                    self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+                    self.smu.set_source_level(self.V2_ch, 'v', self.V_script_start)
+                    self.smu.set_output(self.V1_ch, 1)
+                    self.smu.set_output(self.V2_ch, 1)
+                    time.sleep(self.first_point_delay)
                 self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-                self.smu.run_script(self.transfer_script_label)
+                self.smu.run_script_until_operation_complete(self.transfer_script_label, timeout=60000)
                 self.save_smu_buffer_data()
                 if not self.measurement_is_running:
                     break
             if not self.measurement_is_running:
                 break
+        self.measurement_is_running = False
+        self.set_to_idle(self.V1_ch)
+        self.set_to_idle(self.V2_ch)
     
     def configure_scripted_measurement(self):
         self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS
         self.V1 = np.arange(self.V_DS_min_transfer, self.V_DS_max_transfer + self.V_DS_step_transfer, self.V_DS_step_transfer)
+        if self.sweep_direction == -1:
+            self.V1 = np.flip(self.V1)
+        if self.curve_direction == -1:
+            self.V_script_start, self.V_script_end = self.V_GS_max_transfer, self.V_GS_min_transfer
+            V_script_step = -self.V_GS_step_transfer
+        else:
+            self.V_script_start, self.V_script_end = self.V_GS_min_transfer, self.V_GS_max_transfer
         transfer_script = self.smu.generate_linear_iv_sweep_script(self.V2_ch,
-                                                                   self.V_GS_min_transfer,
-                                                                   self.V_GS_max_transfer,
-                                                                   self.V_GS_step_transfer,
+                                                                   self.V_script_start,
+                                                                   self.V_script_end,
+                                                                   V_script_step,
                                                                    loop=self.curve_loop,
                                                                    secondary_ch=self.V1_ch)
         self.transfer_script_label = 'transfer_script'
@@ -283,6 +303,12 @@ class transistor_transfer(interactive_ui):
             self.curve_loop = False
         elif self.curve_loop_radioButton.isChecked():
             self.curve_loop = True
+    
+    def set_smu_interaction_mode(self):
+        if self.smu_interaction_real_time_radioButton.isChecked():
+            self.smu_interaction_mode = 'real_time'
+        elif self.smu_interaction_scripted_radioButton.isChecked():
+            self.smu_interaction_mode = 'scripted'
         
     def setup_plot_widgets(self):
         # plots occasionally freeze, use this to reset
@@ -332,6 +358,12 @@ class transistor_transfer(interactive_ui):
                                    self.data[self.dataset_labels['measured_I1']] )
     
     def set_to_idle(self, ch):
+        """
+        idle with smu turned OFF, or turned ON at 0V
+        
+        ch : str
+            smu channel, 'a' or 'b'
+        """
         if self.idle_smu_off_radioButton.isChecked():
             self.smu.set_output(ch, 0)
         elif self.idle_0V_radioButton.isChecked():

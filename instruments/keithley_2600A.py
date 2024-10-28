@@ -312,7 +312,7 @@ class keithley_2600A(visa_instrument):
                  'smu{}.trigger.measure.action = 1'.format(sweep_ch),
                  'smu{}.trigger.count = {}'.format(sweep_ch, N_points)
                  ])
-        if secondary_ch is not None:
+        if secondary_ch:
             script.extend(
                 ['smu{}.nvbuffer1.clear()'.format(secondary_ch),
                  'smu{}.nvbuffer2.clear()'.format(secondary_ch),
@@ -348,12 +348,14 @@ class keithley_2600A(visa_instrument):
         script.append('waitcomplete()')
         if loop:
             # execute another sweep with inverted start_V and end_V
+            script.append('smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, end_V, start_V, N_points) )
+            if secondary_ch:
+                script.append('smu{}.trigger.initiate()'.format(secondary_ch) )
             script.extend(
-                ['smu{}.trigger.source.linearv({}, {}, {})'.format(sweep_ch, end_V, start_V, N_points),
-                 'smu{}.trigger.initiate()'.format(sweep_ch),
+                ['smu{}.trigger.initiate()'.format(sweep_ch),
                  'opc()',
                  'waitcomplete()'
-                 ])
+                ])
         script.append('smu{}.source.output = 0'.format(sweep_ch))
         if secondary_ch is not None:
             script.append('smu{}.source.output = 0'.format(secondary_ch))

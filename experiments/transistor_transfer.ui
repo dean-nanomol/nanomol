@@ -683,7 +683,7 @@
      <item row="0" column="2" rowspan="2">
       <widget class="QGroupBox" name="groupBox_6">
        <property name="title">
-        <string>measurement type</string>
+        <string>smu interaction mode</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <property name="spacing">
@@ -702,7 +702,7 @@
          <number>3</number>
         </property>
         <item>
-         <widget class="QRadioButton" name="real_time_measurement_radioButton">
+         <widget class="QRadioButton" name="smu_interaction_real_time_radioButton">
           <property name="text">
            <string>real time</string>
           </property>
@@ -712,7 +712,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="scripted_measurement_radioButton">
+         <widget class="QRadioButton" name="smu_interaction_scripted_radioButton">
           <property name="text">
            <string>scripted</string>
           </property>
