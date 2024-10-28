@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>404</width>
+    <width>441</width>
     <height>744</height>
    </rect>
   </property>
@@ -680,24 +680,7 @@
    </item>
    <item>
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="0">
-      <widget class="QCheckBox" name="save_data_checkBox">
-       <property name="text">
-        <string>save data</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QCheckBox" name="live_plotting_checkBox">
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="text">
-        <string>live plotting</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1" rowspan="2">
+     <item row="0" column="2" rowspan="2">
       <widget class="QGroupBox" name="groupBox_6">
        <property name="title">
         <string>measurement type</string>
@@ -732,6 +715,64 @@
          <widget class="QRadioButton" name="scripted_measurement_radioButton">
           <property name="text">
            <string>scripted</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QCheckBox" name="live_plotting_checkBox">
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>live plotting</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QCheckBox" name="save_data_checkBox">
+       <property name="text">
+        <string>save data</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1" rowspan="2">
+      <widget class="QGroupBox" name="groupBox_7">
+       <property name="title">
+        <string>idle behaviour</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="spacing">
+         <number>3</number>
+        </property>
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
+        <item>
+         <widget class="QRadioButton" name="idle_smu_off_radioButton">
+          <property name="text">
+           <string>turn SMUs OFF</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="idle_0V_radioButton">
+          <property name="text">
+           <string>apply 0V</string>
           </property>
          </widget>
         </item>

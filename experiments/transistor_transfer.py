@@ -134,7 +134,7 @@ class transistor_transfer(interactive_ui):
                         break
                     if self.delay_points != 0:
                         time.sleep(self.delay_points)
-                self.smu.set_output(self.V2_ch, 0)
+                self.set_to_idle(self.V2_ch)
                 if self.data_path is not None:
                     self.save_data()
                 if not self.measurement_is_running:
@@ -143,7 +143,7 @@ class transistor_transfer(interactive_ui):
                     time.sleep(self.delay_curves)
             if not self.measurement_is_running:
                 break
-        self.smu.set_output(self.V1_ch, 0)
+        self.set_to_idle(self.V1_ch)
         self.measurement_is_running = False
             
     def configure_measurement(self):
@@ -331,6 +331,13 @@ class transistor_transfer(interactive_ui):
         self.I1_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],
                                    self.data[self.dataset_labels['measured_I1']] )
     
+    def set_to_idle(self, ch):
+        if self.idle_smu_off_radioButton.isChecked():
+            self.smu.set_output(ch, 0)
+        elif self.idle_0V_radioButton.isChecked():
+            self.smu.set_source_level(ch, 'v', 0.0)
+            self.smu.set_output(ch, 1)
+            
     def shutdown(self):
         self.datafile.close()
         self.smu.close()
