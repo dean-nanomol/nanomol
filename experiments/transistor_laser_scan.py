@@ -62,13 +62,12 @@ class transistor_laser_scan(interactive_ui):
         self.save_scan_attrs()
         self.point_counter = 1
         self.t0 = time.time()
-        # TODO implement scan directions in loops
-        for self.position_Y in self.grid_Y_points:
-            self.stage_Y.move_absolute(self.position_Y)
-            self.wait_for_motion_completed(self.stage_Y)
-            for self.position_X in self.grid_X_points:
-                self.stage_X.move_absolute(self.position_X)
-                self.wait_for_motion_completed(self.stage_X)
+        for self.position_primary in self.primary_axis_points:
+            self.primary_axis_stage.move_absolute(self.position_primary)
+            self.wait_for_motion_completed(self.primary_axis_stage)
+            for self.position_secondary in self.secondary_axis_points:
+                self.secondary_axis_stage.move_absolute(self.position_secondary)
+                self.wait_for_motion_completed(self.secondary_axis_stage)
                 self.measure_grid_point()
                 self.point_counter += 1
                 if not self.grid_scan_is_running:
@@ -141,12 +140,17 @@ class transistor_laser_scan(interactive_ui):
         self.grid_Y_points = np.linspace(self.grid_Y_start, grid_Y_scan_stop, num = self.num_Y_points)
     
     def configure_scan_direction(self):
+        # primary axis is the external scan loop, the secondary axis is scanned for each point of the primary 
         if self.scan_direction_left_right_radioButton.isChecked():
+            self.primary_axis = 'Y'
+            self.secondary_axis = 'X'
             self.primary_axis_stage = self.stage_Y
             self.primary_axis_points = self.grid_Y_points
             self.secondary_axis_stage = self.stage_X
             self.secondary_axis_points = self.grid_X_points
         elif self.scan_direction_up_down_radioButton.isChecked():
+            self.primary_axis = 'X'
+            self.secondary_axis = 'Y'
             self.primary_axis_stage = self.stage_X
             self.primary_axis_points = self.grid_X_points
             self.secondary_axis_stage = self.stage_Y
@@ -170,10 +174,11 @@ class transistor_laser_scan(interactive_ui):
         self.grid_num_points_lineEdit.setText('{} x {} = {}'.format(self.num_X_points, self.num_Y_points, self.num_grid_points))
     
     def measure_grid_point(self):
-        point_label = 'point_X{:.3f}_Y{:.3f}'.format(self.position_X, self.position_Y)
+        point_label = 'point_{}{:.3f}_{}{:.3f}'.format(self.primary_axis, self.position_primary,
+                                                       self.secondary_axis, self.position_secondary)
         self.active_point_group = self.active_scan_group.create_group(point_label)
-        self.active_point_group.attrs.create('X_nominal', self.position_X)
-        self.active_point_group.attrs.create('Y_nominal', self.position_Y)
+        self.active_point_group.attrs.create('{}_nominal'.format(self.primary_axis), self.position_primary)
+        self.active_point_group.attrs.create('{}_nominal'.format(self.secondary_axis), self.position_secondary)
         self.shutter_controller.close_shutter(self.shutter_pin_635nm)
         self.laserOFF_group = self.active_point_group.create_group('laser_OFF')
         self.laserOFF_group.attrs.create('laser_ON', 0)
@@ -200,6 +205,8 @@ class transistor_laser_scan(interactive_ui):
         scan_attrs['grid_X_points'] = self.grid_X_points
         scan_attrs['grid_Y_points'] = self.grid_Y_points
         scan_attrs['delay_grid'] = self.delay_grid
+        scan_attrs['primary_axis'] = self.primary_axis
+        scan_attrs['secondary_axis'] = self.secondary_axis
         for attr, value in scan_attrs.items():
             self.active_scan_group.attrs.create(attr, value)
         self.save_laser_attrs(self.active_scan_group)

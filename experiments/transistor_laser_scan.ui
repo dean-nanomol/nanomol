@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>457</width>
-    <height>474</height>
+    <height>487</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -355,9 +355,12 @@
        <layout class="QHBoxLayout" name="horizontalLayout_16">
         <item>
          <widget class="QRadioButton" name="scan_direction_left_right_radioButton">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
           <property name="text">
-           <string>───┐
-┌──┘
+           <string>───&gt;
+└──&gt;
 └──&gt;</string>
           </property>
           <property name="checked">
@@ -368,9 +371,10 @@
         <item>
          <widget class="QRadioButton" name="scan_direction_up_down_radioButton">
           <property name="text">
-           <string>│┌┐
+           <string>│┐┐
 │││
-└┘V</string>
+V V V
+</string>
           </property>
          </widget>
         </item>
