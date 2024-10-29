@@ -220,7 +220,7 @@ class transistor_transfer(interactive_ui):
         self.configure_scripted_measurement()
         for self.measurement_counter in range(self.N_measurements):
             for self.V1_active in self.V1:
-                if self.first_point_delay != 0:
+                if self.first_point_delay != 0.0:
                     self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
                     self.smu.set_source_level(self.V2_ch, 'v', self.V_script_start)
                     self.smu.set_output(self.V1_ch, 1)
@@ -266,12 +266,12 @@ class transistor_transfer(interactive_ui):
         DS_V_buffer = self.smu.read_buffer('smu{}.nvbuffer2'.format(self.ch_DS), data_types)
         GS_V_buffer = self.smu.read_buffer('smu{}.nvbuffer2'.format(self.ch_GS), data_types)
         self.data = {'time' : GS_I_buffer['timestamps'],
-                'measured_I_DS' : DS_I_buffer['readings'],
-                'measured_V_DS' : DS_V_buffer['readings'],
-                'measured_I_GS' : GS_I_buffer['readings'],
-                'measured_V_GS' : GS_V_buffer['readings'],
-                'calculated_V_DS' : DS_I_buffer['sourcevalues'],
-                'calculated_V_GS' : GS_I_buffer['sourcevalues']}
+                     'measured_I_DS' : DS_I_buffer['readings'],
+                     'measured_V_DS' : DS_V_buffer['readings'],
+                     'measured_I_GS' : GS_I_buffer['readings'],
+                     'measured_V_GS' : GS_V_buffer['readings'],
+                     'calculated_V_DS' : DS_I_buffer['sourcevalues'],
+                     'calculated_V_GS' : GS_I_buffer['sourcevalues']}
         self.save_data()
     
     def set_measurement_mode(self):
