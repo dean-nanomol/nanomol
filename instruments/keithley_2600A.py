@@ -389,6 +389,15 @@ class keithley_2600A(visa_instrument):
             data = buffer_content[i::data_size]
             data_dict[d_type] = np.array(data, dtype=float)
         return data_dict
+    
+    def abort(self, ch):
+        """
+        Abort all overlapped operations, for example a sweep.
+        
+        ch : str
+            channel, 'a' or 'b'
+        """
+        self.write('smu{}.abort()'.format(ch))
 
 
 class keithley_2600A_ui(QtWidgets.QWidget):
