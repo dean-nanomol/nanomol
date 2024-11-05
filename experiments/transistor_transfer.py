@@ -265,7 +265,7 @@ class transistor_transfer(interactive_ui):
         data_types = ['readings']
         DS_V_buffer = self.smu.read_buffer('smu{}.nvbuffer2'.format(self.ch_DS), data_types)
         GS_V_buffer = self.smu.read_buffer('smu{}.nvbuffer2'.format(self.ch_GS), data_types)
-        self.data = {'time' : GS_I_buffer['timestamps'],
+        self.data = {'time' : DS_I_buffer['timestamps'],
                      'measured_I_DS' : DS_I_buffer['readings'],
                      'measured_V_DS' : DS_V_buffer['readings'],
                      'measured_I_GS' : GS_I_buffer['readings'],
