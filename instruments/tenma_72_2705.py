@@ -11,6 +11,7 @@ from nanomol.instruments.serial_instrument import serial_instrument
 from nanomol.utils.interactive_ui import interactive_ui
 
 class tenma_72_2705(serial_instrument):
+    """ Tenma 72-2705 programmable power supply """
     
     def __init__(self, port):
         settings = {'baudrate': 9600,
@@ -79,9 +80,6 @@ class tenma_72_2705(serial_instrument):
         return status
     
 class tenma_72_2705_ui(interactive_ui):
-    """
-    Keithley SMU used to drive an LED. 
-    """
     
     def __init__(self, power_supply):
         super().__init__()
