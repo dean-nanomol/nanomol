@@ -17,3 +17,7 @@ for lv1_group_name in datafile.keys():
                 filename = '{}__{}__{}.csv'.format(lv1_group_name, lv2_group_name, dataset_name)
                 data = np.array(datafile[lv1_group_name][lv2_group_name][dataset_name])
                 np.savetxt(filename, np.transpose(data))
+                
+filename = '{}__{}__{}.csv'.format(lv1_group_name, lv2_group_name, 'calculated_V_GS')
+data = np.array(datafile[lv1_group_name][lv2_group_name]['calculated_V_GS'])
+np.savetxt(filename, np.transpose(data))
