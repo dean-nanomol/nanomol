@@ -220,7 +220,7 @@ class thorlabs_MCLS1_ui(interactive_ui):
         
 if __name__ == '__main__' :
     
-    myMCLS1 = thorlabs_MCLS1('COM4')
+    myMCLS1 = thorlabs_MCLS1('COM8')
     
     ui_app = QtWidgets.QApplication([])
     ui = thorlabs_MCLS1_ui(myMCLS1)

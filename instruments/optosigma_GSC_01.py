@@ -266,7 +266,7 @@ class optosigma_GSC_01_ui(interactive_ui):
         
 if __name__ == '__main__' :
     
-    myGSC01 = optosigma_GSC_01('COM1')
+    myGSC01 = optosigma_GSC_01('COM4')
     
     ui_app = QtWidgets.QApplication([])
     ui = optosigma_GSC_01_ui(myGSC01)
