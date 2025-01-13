@@ -9,6 +9,7 @@ Collection of funcions useful for data fitting.
 
 import numpy as np
 import scipy
+import math
 
 def find_best_linear_fit(X, Y, fit_width, fit_section_start, fit_section_stop):
     """
@@ -67,3 +68,47 @@ def find_best_linear_fit(X, Y, fit_width, fit_section_start, fit_section_stop):
     R2 = fit_R2[max_R2_index]
     
     return (best_fit_centre_index, best_fit_centre_X, fitted_X, slope, intercept, R2)
+
+
+def fit_noise(fit_function, X_data, Y_data, **kwargs):
+    """
+    Returns the noise function fitted to X_data, Y_data. Uses scipy.optimize.curve_fit for fitting.
+
+    Parameters
+    ----------
+    fit_function : str
+        function used for fitting the noise data, one of the following:
+        'constant': fits a constant, f(x) = a. Use e.g. for flat baseline noise.
+        'sinudoid': fits f(x) = a*sin(omega*x+b) +c. Use e.g. for line frequency noise with time as x.
+    X_data : numpy array
+        X data used for fitting.
+    Y_data : numpy array
+        Y data usef for fitting, must have same size as X.
+    **kwargs
+        any keyworded arguments are passed to scipy.optimize.curve_fit, e.g. initial guess, bounds
+
+    Returns
+    -------
+    fitted_func : function
+        function that returns fitted noise given an x value or array as argument
+    """
+    
+    if fit_function == 'constant':
+        def constant_func(x, a):
+            return np.ones(x.size) * a
+        params, params_covariance = scipy.optimize.curve_fit(constant_func, X_data, Y_data, **kwargs)
+        a = params
+        def fitted_func(x):
+            return np.ones(x.size) * a
+        
+    elif fit_function == 'sinusoid':
+        def sinusoid_func(x, a, b, c, freq):
+            omega = 2*math.pi * freq
+            return a * np.sin(omega*x +b) + c
+        params, params_covariance = scipy.optimize.curve_fit(sinusoid_func, X_data, Y_data, **kwargs)
+        a, b, c, freq = params
+        def fitted_func(x):
+            omega = 2*math.pi * freq
+            return a * np.sin(omega*x +b) + c
+        
+    return fitted_func
