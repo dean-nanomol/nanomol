@@ -1,6 +1,6 @@
 Code repository of the eMolMat team in the Nanomol group at the Institute of Materials Science of Barcelona (ICMAB-CSIC).
 
-# Getting started
+## Getting started
 To run any of the code in this repository you will need to install Python on your computer. The recommended way is to install the Anaconda Python distribution, which includes many packages for data analysis and interaction with lab equipment. Download the Anaconda distribution from the following link and install with default settings:\
 https://www.anaconda.com/download/success
 
