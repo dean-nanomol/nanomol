@@ -112,6 +112,7 @@ class transistor_transfer(interactive_ui):
                 if self.live_plotting_checkBox.isChecked():
                     self.create_new_plot_lines()
                 self.color_index += 1
+                self.smu.set_output(self.V1_ch, 1)
                 self.smu.set_output(self.V2_ch, 1)
                 if self.first_point_delay != 0:
                     time.sleep(self.first_point_delay)
@@ -137,6 +138,7 @@ class transistor_transfer(interactive_ui):
                         break
                     if self.delay_points != 0:
                         time.sleep(self.delay_points)
+                self.set_to_idle(self.V1_ch)
                 self.set_to_idle(self.V2_ch)
                 if self.data_path is not None:
                     self.save_data()
@@ -146,7 +148,6 @@ class transistor_transfer(interactive_ui):
                     time.sleep(self.delay_curves)
             if not self.measurement_is_running:
                 break
-        self.set_to_idle(self.V1_ch)
         self.measurement_is_running = False
             
     def configure_measurement(self):
@@ -200,7 +201,7 @@ class transistor_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def save_curve_attrs(self):
-        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve', max_N=100)
+        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve', max_N=10000)
         self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_curve_group.attrs.create('timestamp', timestamp )
