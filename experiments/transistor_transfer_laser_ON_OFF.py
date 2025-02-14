@@ -11,8 +11,6 @@ import time
 import os
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
-from nanomol.instruments.newport_CONEX_MFA_CC import newport_CONEX_MFA_CC, newport_CONEX_MFA_CC_XY_ui
-from nanomol.instruments.optosigma_GSC_01 import optosigma_GSC_01, optosigma_GSC_01_ui
 from nanomol.instruments.arduino_shutter_controller import arduino_shutter_controller, arduino_shutter_controller_ui
 from nanomol.utils.interactive_ui import interactive_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
@@ -21,43 +19,30 @@ from nanomol.experiments.transistor_transfer import transistor_transfer
 
 class transistor_transfer_laser_ON_OFF(interactive_ui):
     
-    def __init__(self, stage_X, stage_Y, MCLS1, shutter_controller, datafile, transistor_transfer ):
+    def __init__(self, shutter_controller, datafile, transistor_transfer ):
         super().__init__()
-        self.stage_X = stage_X
-        self.stage_Y = stage_Y
-        self.MCLS1 = MCLS1
         self.shutter_controller = shutter_controller
         self.shutter_pin_635nm = 2
         self.datafile = datafile
         self.transfer = transistor_transfer
-        ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_laser_scan.ui')
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_transfer_laser_ON_OFF.ui')
         uic.loadUi(ui_file_path, self)
         self.connect_widgets_by_name()
-        self.start_grid_scan_pushButton.clicked.connect(self.start_grid_scan)
-        self.stop_grid_scan_pushButton.clicked.connect(self.stop_grid_scan)
-        self.start_parameter_sweep_pushButton.clicked.connect(self.start_parameter_sweep)
-        self.stop_parameter_sweep_pushButton.clicked.connect(self.stop_parameter_sweep)
-        self.current_position_as_start_pushButton.clicked.connect(self.current_position_as_start)
-        self.current_position_as_stop_pushButton.clicked.connect(self.current_position_as_stop)
-        self.calculate_number_grid_points_pushButton.clicked.connect(self.calculate_number_grid_points)
-        self.grid_scan_is_running = False
-        self.parameter_sweep_is_running = False
+        self.start_pushButton.clicked.connect(self.start_grid_scan)
+        self.stop_pushButton.clicked.connect(self.stop_grid_scan)
+        self.measurement_is_running = False
         
-    def start_grid_scan(self):
-        if not self.grid_scan_is_running:  # do nothing if measurement is already running
-            self.grid_scan_is_running = True
-            self.grid_scan_thread = threading.Thread(target=self.run_grid_scan)
-            self.grid_scan_thread.start()
+    def start_measurement(self):
+        if not self.measurement_is_running:  # do nothing if measurement is already running
+            self.measurement_is_running = True
+            self.measurement_thread = threading.Thread(target=self.run_measurement)
+            self.measurement_thread.start()
     
-    def stop_grid_scan(self):
-        self.grid_scan_is_running = False
+    def stop_measurement(self):
+        self.measurement_is_running = False
     
-    def run_grid_scan(self):
+    def run_measurement(self):
         self.configure_XY_grid()
-        self.configure_scan_direction()
-        self.MCLS1.system_enable = 1
-        self.MCLS1.channel = 2
-        self.MCLS1.enable = 1
         self.save_scan_attrs()
         self.point_counter = 1
         self.t0 = time.time()
@@ -155,30 +140,20 @@ if __name__ == '__main__' :
     
     datafile = hdf5_datafile(mode='x')
     smu = keithley_2600A('USB0::0x05E6::0x2604::4101847::INSTR')
-    stage_X = newport_CONEX_MFA_CC('COM5')
-    stage_Y = newport_CONEX_MFA_CC('COM6')
-    stage_Z = optosigma_GSC_01('COM4')
-    MCLS1 = thorlabs_MCLS1('COM8')
     shutter_controller = arduino_shutter_controller('COM7')
     
     ui_app = QtWidgets.QApplication([])
     
     datafile_viewer = hdf5_viewer(datafile)
     smu_ui = keithley_2600A_ui(smu)
-    stage_XY_ui = newport_CONEX_MFA_CC_XY_ui(stage_X, stage_Y)
-    stage_Z_ui = optosigma_GSC_01_ui(stage_Z)
-    MCLS1_ui = thorlabs_MCLS1_ui(MCLS1)
     shutter_controller_ui = arduino_shutter_controller_ui(shutter_controller)
     transistor_transfer_ui = transistor_transfer(smu, datafile)
-    scan_ui = transistor_laser_scan(stage_X, stage_Y, MCLS1, shutter_controller, datafile, transistor_transfer_ui)
+    transistor_transfer_laser_ON_OFF_ui = transistor_transfer_laser_ON_OFF(shutter_controller, datafile, transistor_transfer_ui)
     
     datafile_viewer.show()
     smu_ui.show()
-    stage_XY_ui.show()
-    stage_Z_ui.show()
-    MCLS1_ui.show()
     shutter_controller_ui.show()
     transistor_transfer_ui.show()
-    scan_ui.show()
+    transistor_transfer_laser_ON_OFF_ui.show()
     
     ui_app.exec()
