@@ -44,7 +44,7 @@
      <item>
       <widget class="QComboBox" name="ch_GS_comboBox">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <item>
         <property name="text">
@@ -84,7 +84,7 @@
      <item>
       <widget class="QComboBox" name="ch_DS_comboBox">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <item>
         <property name="text">
@@ -477,7 +477,7 @@
            <double>-99.989999999999995</double>
           </property>
           <property name="value">
-           <double>-10.000000000000000</double>
+           <double>-5.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -519,7 +519,7 @@
            <double>-99.989999999999995</double>
           </property>
           <property name="value">
-           <double>10.000000000000000</double>
+           <double>5.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -561,7 +561,7 @@
            <double>0.001000000000000</double>
           </property>
           <property name="value">
-           <double>0.100000000000000</double>
+           <double>0.250000000000000</double>
           </property>
          </widget>
         </item>
@@ -624,7 +624,7 @@
      <item row="0" column="3">
       <widget class="QDoubleSpinBox" name="first_point_delay_doubleSpinBox">
        <property name="value">
-        <double>1.000000000000000</double>
+        <double>0.500000000000000</double>
        </property>
       </widget>
      </item>
@@ -729,12 +729,18 @@
        <property name="text">
         <string>live plotting</string>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item row="0" column="0">
       <widget class="QCheckBox" name="save_data_checkBox">
        <property name="text">
         <string>save data</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>

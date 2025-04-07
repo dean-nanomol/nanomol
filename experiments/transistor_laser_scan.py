@@ -247,8 +247,8 @@ if __name__ == '__main__' :
     
     datafile = hdf5_datafile(mode='x')
     smu = keithley_2600A('USB0::0x05E6::0x2604::4101847::INSTR')
-    stage_X = newport_CONEX_MFA_CC('COM5')
-    stage_Y = newport_CONEX_MFA_CC('COM6')
+    stage_X = newport_CONEX_MFA_CC('COM6')
+    stage_Y = newport_CONEX_MFA_CC('COM5')
     stage_Z = optosigma_GSC_01('COM4')
     MCLS1 = thorlabs_MCLS1('COM8')
     shutter_controller = arduino_shutter_controller('COM7')
