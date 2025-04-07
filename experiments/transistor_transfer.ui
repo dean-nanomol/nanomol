@@ -44,7 +44,7 @@
      <item>
       <widget class="QComboBox" name="ch_GS_comboBox">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <item>
         <property name="text">
@@ -84,7 +84,7 @@
      <item>
       <widget class="QComboBox" name="ch_DS_comboBox">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <item>
         <property name="text">
@@ -561,7 +561,7 @@
            <double>0.001000000000000</double>
           </property>
           <property name="value">
-           <double>0.250000000000000</double>
+           <double>0.100000000000000</double>
           </property>
          </widget>
         </item>
