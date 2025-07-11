@@ -93,6 +93,7 @@ class transistor_output_transfer(interactive_ui):
                 # prepare new plot line for upcoming data
                 self.create_new_plot_lines()
                 self.color_index += 1
+                self.smu.set_output(self.V1_ch, 1)
                 self.smu.set_output(self.V2_ch, 1)
                 time.sleep(self.first_point_delay)
                 t0 = time.time()
@@ -116,12 +117,15 @@ class transistor_output_transfer(interactive_ui):
                         break
                     if self.delay_points != 0:
                         time.sleep(self.delay_points)
+                self.smu.set_output(self.V1_ch, 0)
                 self.smu.set_output(self.V2_ch, 0)
                 self.save_data()
                 if not self.measurement_is_running:
                     break
                 if self.delay_curves != 0:
                     time.sleep(self.delay_curves)
+            if not self.measurement_is_running:
+                break
         self.smu.set_output(self.V1_ch, 0)
         self.measurement_is_running = False
             
