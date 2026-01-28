@@ -16,8 +16,9 @@ If you are new to Python take some time to familiarise yourself with its syntax,
 https://pynative.com/python-exercises-with-solutions/ (includes a link to an [Online Code Editor](https://pynative.com/online-python-code-editor-to-execute-python-code/) to execute code in the browser)\
 https://inventwithpython.com/pythongently/
 
-A conventient way to analyse and plot data is to use Jupyter Notebooks with the Matplotlib package. Here is a tutorial to get started (skip the installation section, since you already installed everything through Anaconda):\
-https://www.geeksforgeeks.org/using-matplotlib-with-jupyter-notebook/
+A conventient way to analyse and plot data is to use Jupyter Notebooks with the Matplotlib package. Here is a tutorial to get started (skip the installation sections, since you already installed everything through Anaconda):
+- running Jupyter Notebooks: https://docs.jupyter.org/en/latest/running.html
+- using Matplotlib to make plots in Jupyter Notebooks: https://www.geeksforgeeks.org/using-matplotlib-with-jupyter-notebook/
 
 If analysing data from the lab you will need to use the HDF5 data format. You can read and write these files with the h5py package that comes with Anaconda, but you will need to write some code. Here are some resources to get you started:\
 https://docs.h5py.org/en/latest/quick.html
