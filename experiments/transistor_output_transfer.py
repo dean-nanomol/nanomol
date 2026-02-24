@@ -101,8 +101,8 @@ class transistor_output_transfer(interactive_ui):
                     self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                     measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
                     measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
-                    compliance_V1 = self.smu.get_compliance(self.V1_ch)
-                    compliance_V2 = self.smu.get_compliance(self.V2_ch)
+                    #compliance_V1 = self.smu.get_compliance(self.V1_ch)
+                    #compliance_V2 = self.smu.get_compliance(self.V2_ch)
                     self.data[self.dataset_labels['time']].append(time.time() - t0)
                     self.data[self.dataset_labels['measured_V1']].append(measured_V1)
                     self.data[self.dataset_labels['measured_I1']].append(measured_I1)
@@ -110,8 +110,8 @@ class transistor_output_transfer(interactive_ui):
                     self.data[self.dataset_labels['measured_I2']].append(measured_I2)
                     self.data[self.dataset_labels['calculated_V1']].append(self.V1_active)
                     self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
-                    self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
-                    self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
+                    #self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
+                    #self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
                     self.update_plots_signal.emit()
                     if not self.measurement_is_running:
                         break
@@ -153,9 +153,9 @@ class transistor_output_transfer(interactive_ui):
             'measured_V2' : 'measured_V_{}'.format(self.V2_label),
             'measured_I2' : 'measured_I_{}'.format(self.V2_label),
             'calculated_V1' : 'calculated_V_{}'.format(self.V1_label),
-            'calculated_V2' : 'calculated_V_{}'.format(self.V2_label),
-            'compliance_V1' : 'compliance_V_{}'.format(self.V1_label),
-            'compliance_V2' : 'compliance_V_{}'.format(self.V2_label) }
+            'calculated_V2' : 'calculated_V_{}'.format(self.V2_label) }
+#            'compliance_V1' : 'compliance_V_{}'.format(self.V1_label),
+#            'compliance_V2' : 'compliance_V_{}'.format(self.V2_label) }
         if self.sweep_direction == -1:
             self.V1 = np.flip(self.V1)
         if self.sweep_loop:
@@ -257,17 +257,17 @@ class transistor_output_transfer(interactive_ui):
     def create_new_plot_lines(self):
         color = pg.intColor(self.color_index, hues=self.V1.size*self.N_measurements)
         pen = pg.mkPen(color=color)
-        self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
+        self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.dataset_labels['calculated_V2']],
                                                 self.data[self.dataset_labels['measured_I2']],
                                                 pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
-        self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
+        self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.dataset_labels['calculated_V2']],
                                                 self.data[self.dataset_labels['measured_I1']],
                                                 pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
         
     def update_plots(self):
-        self.I2_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],
+        self.I2_vs_V2_line.setData(self.data[self.dataset_labels['calculated_V2']],
                                    self.data[self.dataset_labels['measured_I2']] )
-        self.I1_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],
+        self.I1_vs_V2_line.setData(self.data[self.dataset_labels['calculated_V2']],
                                    self.data[self.dataset_labels['measured_I1']] )
     
     def shutdown(self):
