@@ -477,8 +477,8 @@ class keithley_2600A_ui(QtWidgets.QWidget):
     
 if __name__ == '__main__' :
     
-    #myKeithley = keithley_2600A(address = 'GPIB0::27::INSTR')
-    myKeithley = keithley_2600A(address = 'USB0::0x05E6::0x2604::4101847::INSTR')
+    myKeithley = keithley_2600A(address = 'GPIB0::27::INSTR')
+    #myKeithley = keithley_2600A(address = 'USB0::0x05E6::0x2604::4101847::INSTR')
     
     ui_app = QtWidgets.QApplication([])
     ui = keithley_2600A_ui(myKeithley)
