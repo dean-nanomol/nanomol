@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>331</width>
+    <width>295</width>
     <height>179</height>
    </rect>
   </property>
@@ -24,7 +24,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEdit"/>
+      <widget class="QLineEdit" name="description_lineEdit">
+       <property name="text">
+        <string>bias_stress</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -44,7 +48,7 @@
       </spacer>
      </item>
      <item row="1" column="2">
-      <widget class="QDoubleSpinBox" name="doubleSpinBox">
+      <widget class="QDoubleSpinBox" name="measurements_interval_doubleSpinBox">
        <property name="decimals">
         <number>3</number>
        </property>
@@ -59,12 +63,12 @@
      <item row="1" column="0">
       <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>time between transfer/output measurements [s]</string>
+        <string>time between transfer measurements [s]</string>
        </property>
       </widget>
      </item>
      <item row="0" column="2">
-      <widget class="QSpinBox" name="spinBox">
+      <widget class="QSpinBox" name="N_measurements_spinBox">
        <property name="minimum">
         <number>1</number>
        </property>
@@ -79,7 +83,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>number of transfer/output measurements</string>
+        <string>number of transfer measurements</string>
        </property>
       </widget>
      </item>
@@ -101,7 +105,7 @@
    <item>
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="1" column="1">
-      <widget class="QLineEdit" name="lineEdit_3"/>
+      <widget class="QLineEdit" name="progress_lineEdit"/>
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_5">
@@ -111,7 +115,7 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEdit_2"/>
+      <widget class="QLineEdit" name="estimated_time_lineEdit"/>
      </item>
      <item row="0" column="0">
       <widget class="QLabel" name="label_4">
