@@ -26,8 +26,10 @@ class current_vs_time(interactive_ui):
     
     update_plots_signal = pyqtSignal()
     
-    def __init__(self, datafile, smu):
+    def __init__(self, smu, datafile=None):
         super().__init__()
+        if datafile is not None:
+            self.default_datafile = datafile
         self.datafile = datafile
         self.smu = smu
         ui_file_path = os.path.join(os.path.dirname(__file__), 'current_vs_time.ui')
@@ -41,11 +43,28 @@ class current_vs_time(interactive_ui):
         self.setup_plot_widgets()
         self.measurement_is_running = False
         
-    def start_measurement(self):
+    def start_measurement(self, *args, datafile=None, path=None):          
+        """
+        datafile : hdf5 datafile [optional, default=None]
+            hdf5 data file where data of the measurement will be saved. Useful when calling externally.
+            If passed must also pass data_path. If not passed defaults to saving to default_datafile.
+        
+        path : str [optional, default=None]
+            Path to hdf5 group within passed datafile where data is to be saved.
+            Usually generated within calling environment using hdf5_group.name
+            If not passed, defaults to saving in root group of default_datafile.
+        """
+        # *args captures unnecessary arguments passed by qt buttons
+        if datafile is not None:
+            self.datafile = datafile
+            self.data_path = datafile[path]
+        else:
+            self.datafile = self.default_datafile
+            self.data_path = self.datafile
         if not self.measurement_is_running:  # do nothing if measurement is already running
             self.measurement_is_running = True
-            measurement_thread = threading.Thread(target=self.run_measurement)
-            measurement_thread.start()
+            self.measurement_thread = threading.Thread(target=self.run_measurement)
+            self.measurement_thread.start()
             
     def stop_measurement(self):
         if self.measurement_is_running:
@@ -101,17 +120,18 @@ class current_vs_time(interactive_ui):
         
     def save_data(self):
         """ write data to hdf5 datafile """
-        active_group = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=100)
-        self.active_group =  self.datafile.create_group(active_group)
+        active_group = self.datafile.get_unique_group_name(self.data_path, basename=self.description, max_N=9999)
+        self.active_group = self.data_path.create_group(active_group)
         self.active_group.attrs.create('description', self.description)
         self.active_group.attrs.create('timestamp', self.timestamp)
+        self.active_group.attrs.create('measurement_type', 'current_vs_time')
         self.active_group.attrs.create('channel_GS', self.ch_GS)
         self.active_group.attrs.create('channel_DS', self.ch_DS)
         for key, value in self.smu.get_settings().items():
             self.active_group.attrs.create('keithley_{}'.format(key), value)
         for dataset_name, data in self.data.items():
             self.active_group.create_dataset(dataset_name, data=np.array(data) )
-        self.datafile.flush()
+        self.data_path.file.flush()
     
     def setup_plot_widgets(self):
         self.plot_layout.removeWidget(self.I_DS_vs_time)
@@ -154,7 +174,7 @@ if __name__ == '__main__' :
     
     experiment_app = QtWidgets.QApplication([])
     
-    experiment = current_vs_time(datafile, smu)
+    experiment = current_vs_time(smu, datafile)
     datafile_viewer = hdf5_viewer(datafile)
     smu_ui = keithley_2600A_ui(smu)
     experiment.show()

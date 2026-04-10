@@ -44,7 +44,7 @@
      <item>
       <widget class="QComboBox" name="ch_GS_comboBox">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <item>
         <property name="text">
@@ -84,7 +84,7 @@
      <item>
       <widget class="QComboBox" name="ch_DS_comboBox">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <item>
         <property name="text">
@@ -202,11 +202,14 @@
        <property name="toolTip">
         <string>set to -1 to run indefinitely</string>
        </property>
+       <property name="decimals">
+        <number>3</number>
+       </property>
        <property name="minimum">
         <double>-1.000000000000000</double>
        </property>
        <property name="maximum">
-        <double>99999.000000000000000</double>
+        <double>999999.998999999952503</double>
        </property>
        <property name="value">
         <double>-1.000000000000000</double>
