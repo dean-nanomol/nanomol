@@ -134,7 +134,7 @@ class transistor_output_transfer(interactive_ui):
         """
         Set output/transfer measurement type, define voltages to apply, save instrument settings and basic attributes.
         """
-        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=100)
+        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=9999)
         self.active_sweep_group =  self.datafile.create_group(active_sweep_name)
         self.smu.set_source_function('a', 1)
         self.smu.set_source_function('b', 1)

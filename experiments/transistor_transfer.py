@@ -67,7 +67,7 @@ class transistor_transfer(interactive_ui):
         path : str [optional, default=None]
             Path to hdf5 group within passed datafile where data is to be saved.
             Usually generated within calling environment using hdf5_group.name
-            If not passed defaults to saving in root group of default_datafile.
+            If not passed, defaults to saving in root group of default_datafile.
         """
         # *args captures unnecessary arguments passed by qt buttons
         if datafile is not None:
@@ -188,7 +188,7 @@ class transistor_transfer(interactive_ui):
             self.data[label] = []
             
     def save_sweep_attrs(self):
-        active_sweep_name = self.datafile.get_unique_group_name(self.data_path, basename=self.description, max_N=1000)
+        active_sweep_name = self.datafile.get_unique_group_name(self.data_path, basename=self.description, max_N=99999)
         self.active_sweep_group =  self.data_path.create_group(active_sweep_name)
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
@@ -201,7 +201,7 @@ class transistor_transfer(interactive_ui):
         self.active_sweep_group.attrs.create('timestamp', timestamp )
     
     def save_curve_attrs(self):
-        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve', max_N=10000)
+        active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve', max_N=99999)
         self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
         self.active_curve_group.attrs.create('timestamp', timestamp )
