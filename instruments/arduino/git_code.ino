@@ -59,7 +59,7 @@ void read_command() {
     else {
       input_command[i] = char(0);
       i = 0;
-      Serial.println(input_command);
+     // Serial.println(input_command);
       new_command_is_ready = true;
       if (strstr(input_command, "query") != NULL) {
         new_query_command_is_ready = true;
