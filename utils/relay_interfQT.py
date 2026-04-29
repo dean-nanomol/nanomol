@@ -6,7 +6,7 @@ Created on Mon Apr 27 11:59:27 2026
 commands sent to arduino:
     on 
     off
-    status
+    query_status
 """
 import sys 
 import time 
@@ -38,7 +38,7 @@ def turn_relay_off():
     
     
 def read_relay_status():
-    send_command("status")
+    send_command("query_status")
     time.sleep(0.2)
     response = arduino.readline().decode(errors="ignore").strip()
     if response == "":
