@@ -200,4 +200,3 @@ For 0x25:
 So A2 and A0 are connected to 5V, and A1 is connected to GND.
 */
 
-*/
