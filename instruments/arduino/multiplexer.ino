@@ -1,12 +1,17 @@
 #include <Wire.h>
+#include <string.h>
+#include <stdlib.h>
 
 #define MCP1 0x20 // expander 1 A0 A1 A2 -> GND 
 #define MCP2 0x21 // expander 2 A0 -> 5V A1 A2 -> GND
+#define MCP_CONTROL_PIN 2
 
 #define IODIRA 0x00 // Input/Output for GPIOA
 #define IODIRB 0x01 // Input/Output for GPIOB
 #define GPIOA 0x12 // value on the port A high or low
 #define GPIOB 0x13 // value on the port B high or low
+#define OLATA 0x14 // output latch register for port A
+#define OLATB 0x15 // output latch register for port B
 
 // store the current relay states for each expander port, this allows multiple relays to stay on at the same time
 byte mcp1A_state = 0x00;
@@ -14,8 +19,17 @@ byte mcp1B_state = 0x00;
 byte mcp2A_state = 0x00;
 byte mcp2B_state = 0x00;
 
+bool new_command_is_ready = false;
+bool new_query_command_is_ready = false;
+const byte max_command_length = 40;
+
+// variables for serial readout
+char input_character;
+char end_marker = '\n';
+char input_command[max_command_length];
+
 void writeRegister(byte deviceAddress, byte reg, byte value){
-  // deviceAddress: which expander, reg: which register, value: output state  
+  // deviceAddress: which expander, reg: which register, value: output state
   Wire.beginTransmission(deviceAddress);
   Wire.write(reg);
   Wire.write(value);
@@ -28,19 +42,20 @@ void allOff(){
   mcp1B_state = 0x00;
   mcp2A_state = 0x00;
   mcp2B_state = 0x00;
+
   writeRegister(MCP1, GPIOA, mcp1A_state);
   writeRegister(MCP1, GPIOB, mcp1B_state);
   writeRegister(MCP2, GPIOA, mcp2A_state);
   writeRegister(MCP2, GPIOB, mcp2B_state);
 }
 
-void setComponentState(int componentNumber, bool state){ // state: true = ON, false = OFF
-  if(componentNumber < 1 || componentNumber > 25){
-    Serial.println("Invalid component number");
+void setPinState(int pinNumber, bool state){ // state: true = ON, false = OFF
+  if(pinNumber < 1 || pinNumber > 25){
+    Serial.println("Invalid pin number");
     return;
   }
 
-  int index = componentNumber - 1; //components start at 1, but bits start at 0
+  int index = pinNumber - 1; // pins start at 1, but bits start at 0
   byte address; // expander
   byte port; // A or B
   byte bitNumber; // bit position inside the selected port
@@ -49,27 +64,27 @@ void setComponentState(int componentNumber, bool state){ // state: true = ON, fa
   if(index < 13){ // expander 1
     address = MCP1;
 
-    if(index < 8){ //port A
+    if(index < 8){ // port A
       port = GPIOA;
       bitNumber = index;
       stateVariable = &mcp1A_state;
     }
     else{ // port B
       port = GPIOB;
-      bitNumber = index - 8; // 8: pins for port A
+      bitNumber = index - 8; // 8 pins for port A
       stateVariable = &mcp1B_state;
     }
   }
   else{ // expander 2
-    address = MCP2; 
-    int index2 = index - 13; // 13:pins for expander 1
+    address = MCP2;
+    int index2 = index - 13; // 13 pins for expander 1
 
     if(index2 < 8){ // port A
       port = GPIOA;
       bitNumber = index2;
       stateVariable = &mcp2A_state;
     }
-    else{ //port B
+    else{ // port B
       port = GPIOB;
       bitNumber = index2 - 8;
       stateVariable = &mcp2B_state;
@@ -78,25 +93,26 @@ void setComponentState(int componentNumber, bool state){ // state: true = ON, fa
 
   if(state){ // true = ON
     *stateVariable = *stateVariable | (1 << bitNumber); // Set the selected bit to 1 without changing the other relay states
-    Serial.print("Component ");
-    Serial.print(componentNumber);
+    Serial.print("Pin ");
+    Serial.print(pinNumber);
     Serial.println(" ON");
   }
   else{
     *stateVariable = *stateVariable & ~(1 << bitNumber); // Set the selected bit to 0 without changing the other relay states
-    Serial.print("Component ");
-    Serial.print(componentNumber);
+    Serial.print("Pin ");
+    Serial.print(pinNumber);
     Serial.println(" OFF");
   }
 
   writeRegister(address, port, *stateVariable);
 }
 
-bool getComponentState(int componentNumber){
-   if(componentNumber < 1 || componentNumber > 25){
+bool getPinState(int pinNumber){
+  if(pinNumber < 1 || pinNumber > 25){
     return false;
   }
-  int index = componentNumber - 1;
+
+  int index = pinNumber - 1;
 
   if(index < 13){
     if(index < 8){
@@ -119,9 +135,23 @@ bool getComponentState(int componentNumber){
 }
 
 void setup(){
-  Wire.begin();
   Serial.begin(115200);
-  delay(1000);
+
+  pinMode(MCP_CONTROL_PIN, OUTPUT);
+  digitalWrite(MCP_CONTROL_PIN, LOW);
+  delay(10);
+  digitalWrite(MCP_CONTROL_PIN, HIGH);
+  delay(10);
+
+  Wire.begin();
+  delay(50);
+
+  // all outputs LOW
+  writeRegister(MCP1, OLATA, 0x00);
+  writeRegister(MCP1, OLATB, 0x00);
+  writeRegister(MCP2, OLATA, 0x00);
+  writeRegister(MCP2, OLATB, 0x00);
+
   // All ports are outputs
   writeRegister(MCP1, IODIRA, 0x00);
   writeRegister(MCP1, IODIRB, 0x00);
@@ -129,53 +159,97 @@ void setup(){
   writeRegister(MCP2, IODIRB, 0x00);
 
   allOff();
+
   Serial.println("System ready");
   Serial.println("Commands: on 1 to on 25, off 1 to off 25, off all, status");
 }
 
 void loop(){
-  if(Serial.available() > 0){
-    String command = Serial.readStringUntil('\n');
-    command.trim();
+  read_command();
+  reply_to_query();
 
-    if(command == "off all"){
+  if(new_command_is_ready){
+    if(strcmp(input_command, "off all") == 0){
       allOff();
-      Serial.println("All components are off");
+      Serial.println("All pins are off");
     }
-    else if(command.startsWith("on ")){
-      int componentNumber = command.substring(3).toInt();
-      setComponentState(componentNumber, true);
+    else if(strncmp(input_command, "on ", 3) == 0){
+      int pinNumber = atoi(input_command + 3);
+      setPinState(pinNumber, true);
     }
-    else if(command.startsWith("off ")){
-      int componentNumber = command.substring(4).toInt();
-      setComponentState(componentNumber, false);
+    else if(strncmp(input_command, "off ", 4) == 0){
+      int pinNumber = atoi(input_command + 4);
+      setPinState(pinNumber, false);
     }
-    else if(command == "status"){
-      for(int componentNumber = 1; componentNumber <= 25; componentNumber++){
-        Serial.print(getComponentState(componentNumber));
+    else if(strcmp(input_command, "status") != 0){
+      Serial.println("Unknown command");
+    }
 
-        if(componentNumber < 25){
+    new_command_is_ready = false;
+    new_query_command_is_ready = false;
+  }
+}
+
+void read_command(){
+  // build up command string until reaching end_marker character
+  static byte i = 0;
+
+  // read serial input
+  while(Serial.available() > 0
+        && new_command_is_ready == false){
+
+    // read the incoming string
+    input_character = Serial.read();
+
+    if(input_character != end_marker){
+      if(i < max_command_length - 1){
+        input_command[i] = input_character;
+        i++;
+      }
+    }
+    else{
+      // end_marker received, terminate command string with null character
+      input_command[i] = char(0);
+      i = 0;
+
+      // identify command type
+      new_command_is_ready = true;
+
+      if(strcmp(input_command, "status") == 0){
+        new_query_command_is_ready = true;
+      }
+    }
+  }
+}
+
+void reply_to_query(){
+  if(new_query_command_is_ready){
+    if(strcmp(input_command, "status") == 0){
+      for(int pinNumber = 1; pinNumber <= 25; pinNumber++){
+        Serial.print(getPinState(pinNumber));
+
+        if(pinNumber < 25){
           Serial.print(",");
         }
       }
+
       Serial.println();
     }
-    else{
-      Serial.println("Unknown command");
-    }
+
+    new_query_command_is_ready = false;
   }
 }
 
 /*
 Only 25 outputs are used and divided between 2 expanders:
-- MCP1 address 0x20 gives components 1 to 13
-- MCP2 address 0x21 gives components 14 to 25
+- MCP1 address 0x20 gives pins 1 to 13
+- MCP2 address 0x21 gives pins 14 to 25
 
 Mapping:
-- Components 1 to 8   -> MCP1 GPIOA GPA0 to GPA7
-- Components 9 to 13  -> MCP1 GPIOB GPB0 to GPB4
-- Components 14 to 21 -> MCP2 GPIOA GPA0 to GPA7
-- Components 22 to 25 -> MCP2 GPIOB GPB0 to GPB3
+- Pins 1 to 8   -> MCP1 GPIOA GPA0 to GPA7
+- Pins 9 to 13  -> MCP1 GPIOB GPB0 to GPB4
+- Pins 14 to 21 -> MCP2 GPIOA GPA0 to GPA7
+- Pins 22 to 25 -> MCP2 GPIOB GPB0 to GPB3
 
 The address of each expander is chosen with pins A0, A1, A2:
 
@@ -199,4 +273,3 @@ For 0x25:
 5 = 4 + 1
 So A2 and A0 are connected to 5V, and A1 is connected to GND.
 */
-
