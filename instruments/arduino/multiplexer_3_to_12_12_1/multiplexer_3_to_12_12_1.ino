@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MCP1 0x20 // expander 1 A0 A1 A2 -> GND 
-#define MCP2 0x21 // expander 2 A0 -> 5V A1 A2 -> GND
+#define MCP1 0x20 // expander 1: A0 A1 A2 -> GND 
+#define MCP2 0x21 // expander 2: A0 -> 5V , A1 A2 -> GND
 #define MCP_CONTROL_PIN 2
 
 #define IODIRA 0x00 // Input/Output for GPIOA
@@ -61,19 +61,61 @@ void setPinState(int pinNumber, bool state){ // state: true = ON, false = OFF
   byte bitNumber; // bit position inside the selected port
   byte* stateVariable; // points to the state variable of the selected port
 
-  if(index < 13){ // expander 1
+  if ((index <= 6) || (index >= 13 && index <= 18)) { // expander 1
     address = MCP1;
 
-    if(index < 8){ // port A
-      port = GPIOA;
-      bitNumber = index;
+    switch (index) {
+      case 0: {
+        port = GPIOA;
+        bitNumber = 1;
+        break;
+      }
+      case 1: {
+        port = GPIOB;
+        bitNumber = 2;
+        break;
+      }
+      case 2: {
+        port = GPIOA;
+        bitNumber = 6;
+        break;
+      }
+      case 3: {
+        port = GPIOA;
+        bitNumber = 2;
+        break;
+      }
+      case 4: {
+        port = GPIOB;
+        bitNumber = 4;
+        break;
+      }
+      case 5: {
+        port = GPIOB;
+        bitNumber = 3;
+        break;
+      }
+      
+    }
+
+    if (port == GPIOA) {
       stateVariable = &mcp1A_state;
     }
-    else{ // port B
-      port = GPIOB;
-      bitNumber = index - 8; // 8 pins for port A
+    else if (port == GPIOB) {
       stateVariable = &mcp1B_state;
     }
+
+    // if(index < 8){ // port A
+    //   port = GPIOA;
+    //   bitNumber = index;
+    //   stateVariable = &mcp1A_state;
+    // }
+    // else{ // port B
+    //   port = GPIOB;
+    //   bitNumber = index - 8; // 8 pins for port A
+    //   stateVariable = &mcp1B_state;
+    // }
+
   }
   else{ // expander 2
     address = MCP2;
@@ -246,10 +288,31 @@ Only 25 outputs are used and divided between 2 expanders:
 - MCP2 address 0x21 gives pins 14 to 25
 
 Mapping:
-- Pins 1 to 8   -> MCP1 GPIOA GPA0 to GPA7
-- Pins 9 to 13  -> MCP1 GPIOB GPB0 to GPB4
-- Pins 14 to 21 -> MCP2 GPIOA GPA0 to GPA7
-- Pins 22 to 25 -> MCP2 GPIOB GPB0 to GPB3
+pin 1 -> index 0 -> MCP1 GPA1
+pin 2 -> index 1 -> MCP1 GPB2
+pin 3 -> index 2 -> MCP1 GPA6
+pin 4 -> index 3 -> MCP1 GPA2
+pin 5 -> index 4 -> MCP1 GPB4
+pin 6 -> index 5 -> MCP1 GPB3
+pin 7 -> index 6 -> MCP1 GPB1
+pin 8 -> index 7 -> MCP2 GPB3
+pin 9 -> index 8 -> MCP2 GPB2
+pin 10 -> index 9 -> MCP2 GPA6
+pin 11 -> index 10 -> MCP2 GPA0
+pin 12 -> index 11 -> MCP2 GPB1
+pin 13 -> index 12 -> MCP2 GPA5
+pin 14 -> index 13 -> MCP1 GPA4
+pin 15 -> index 14 -> MCP1 GPA7
+pin 16 -> index 15 -> MCP1 GPA0
+pin 17 -> index 16 -> MCP1 GPA3
+pin 18 -> index 17 -> MCP1 GPA5
+pin 19 -> index 18 -> MCP1 GPB0
+pin 20 -> index 19 -> MCP2 GPA3
+pin 21 -> index 20 -> MCP2 GPA7
+pin 22 -> index 21 -> MCP2 GPA2
+pin 23 -> index 22 -> MCP2 GPA4
+pin 24 -> index 23 -> MCP2 GPB0
+pin 25 -> index 24 -> MCP2 GPA1
 
 The address of each expander is chosen with pins A0, A1, A2:
 
