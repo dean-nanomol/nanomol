@@ -14,81 +14,15 @@ Available commands:
 """
 
 import os
-import time
 import sys
-import serial
 from PyQt5 import QtWidgets, uic
 from nanomol.instruments import serial_instrument
+from nanomol.utils import interactive_ui
 
-
-class SerialInstrument:
-    """
-    Generic serial communication class.
-
-    It handles serial communication:
-    - opening the serial port
-    - sending text commands
-    - reading Arduino replies
-    - closing the connection
-    """
-
-    def __init__(self, port, baudrate=115200, timeout=1, termination_character="\n"):
-        self.instrument = serial.Serial(
-            port=port,
-            baudrate=baudrate,
-            timeout=timeout
-        )
-        self.termination_character = termination_character
-
-        # When Python opens the serial port, Arduino resets.
-        # We wait and clear the startup messages from the Arduino.
-        time.sleep(2)
-        self.instrument.reset_input_buffer()
-
-    def write(self, command):
-        """
-        Send one command to the Arduino.
-    
-        The termination character is automatically added because the Arduino
-        waits for a newline before processing a complete command.
-        """
-        message = command + self.termination_character
-        self.instrument.write(message.encode())
-        self.instrument.flush()
-
-    def read(self):
-        """
-        Read one complete line returned by the Arduino.
-    
-        Reading stops when the termination character is received.
-    
-        """  
-        message = self.instrument.read_until(
-            expected=self.termination_character.encode()
-        )
-        return message.decode().strip()
-
-    def query(self, command):
-        """
-        Send a command and read the corresponding Arduino reply.
-
-        """
-        self.write(command)
-        return self.read()
-
-    def close(self):
-        """
-        Close the serial port.
-
-        """
-        self.instrument.close()
-
-
-class ArduinoMultiplexer(SerialInstrument):
+class arduino_multiplexer_3_to_12_12_1(serial_instrument):
     """
     Instrument class for the Arduino-controlled relay multiplexer.
 
-    This class separates the instrument functionality from the user interface.
     It translates Python method calls into Arduino serial commands:
     - on <pin_number>
     - off <pin_number>
@@ -97,97 +31,45 @@ class ArduinoMultiplexer(SerialInstrument):
     """
 
     def __init__(self, port):
-        super().__init__(
-            port=port,
-            baudrate=115200,
-            timeout=1,
-            termination_character="\n"
-        )
+        settings = {'baudrate': 115200,
+                    'timeout': 1 }
+        termination = '\n'
+        super().__init__(port=port, port_settings=settings, termination_character=termination)
 
     def set_pin_state(self, pin_number, state):
         """
-        Turn one multiplexer pin ON or OFF
-        
+        Turn one pin ON or OFF
         """
-
         if state:
-            command = f"on {pin_number}"
+            self.write('on {:d}'.format(pin_number))
         else:
-            command = f"off {pin_number}"
+            self.write('off {:d}'.format(pin_number))
 
-        print("Python sends:", command)
-
-        reply = self.query(command)
-
-        print("Arduino replied:", reply)
-
-        return reply
-
-    def turn_off_all_pins(self):
+    def off_all(self):
         """
-        Turn all 25 multiplexer pins OFF
-
+        Turn all 25 pins OFF
         """
-        command = "off all"
+        self.write('off all')
 
-        print("Python sends:", command)
-
-        reply = self.query(command)
-
-        print("Arduino replied:", reply)
-
-        return reply
-
-    def read_pin_states(self):
+    def status(self):
         """
-        Request the stored state of all 25 pins from the Arduino.
+        Returns
+        status : string
+            status (0: OFF, 1: ON) of each pin, as a string of 25 digits.
 
-        The Arduino returns one comma-separated value for every pin.
-
-        Example response:
-
-        1,0,0,1,0,...,0
-
-        1 means ON and 0 means OFF.
-
-       """
-        command = "status"
-
-        print("Python sends:", command)
-
-        response = self.query(command)
-
-        print("Arduino replied:", response)
-
-        return response.split(",")
+        Example: if only pins 1 and 4 are ON, returns:
+        10010...0
+        """
+        return self.query('status?')
 
 
-class ArduinoMultiplexerUI(QtWidgets.QMainWindow):
-    """
-    Qt graphical interface for controlling the multiplexer.
-
-    The interface contains:
-
-    - 25 checkboxes representing the 25 multiplexer pins;
-    - an "All off" button;
-    - a "Read status" button;
-    - a status field showing the most recent Arduino reply;
-    - a text field listing the currently selected pins.
-
-    Any number of pins from 0 to 25 can remain ON simultaneously.
-    """
-
+class arduino_multiplexer_3_to_12_12_1_ui(interactive_ui):
     def __init__(self, multiplexer):
         super().__init__()
         self.multiplexer = multiplexer
 
-        ui_file_path = os.path.join(
-            os.path.dirname(__file__),
-            "arduino_multiplexer.ui"
-        )
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'arduino_multiplexer_3_to_12_12_1.ui')
         uic.loadUi(ui_file_path, self)
-
-        self.setWindowTitle("Multiplexer")
         
         # Store the checkbox objects in their physical pin order.
         # Index 0 represents pin 1, index 1 represents pin 2, and so on.
