@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>242</width>
-    <height>354</height>
+    <width>275</width>
+    <height>383</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,9 +15,19 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QCheckBox" name="exclusive_mode_checkBox">
+     <property name="text">
+      <string>limit ON pins to one per channel</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QGroupBox" name="groupBox">
+      <widget class="QGroupBox" name="ch1_groupBox">
        <property name="title">
         <string>channel 1</string>
        </property>
@@ -110,7 +120,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QGroupBox" name="groupBox_2">
+      <widget class="QGroupBox" name="ch2_groupBox">
        <property name="title">
         <string>channel 2</string>
        </property>
@@ -203,7 +213,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QGroupBox" name="groupBox_3">
+      <widget class="QGroupBox" name="ch3_groupBox">
        <property name="title">
         <string>channel 3</string>
        </property>
@@ -241,7 +251,7 @@
      <item>
       <widget class="QPushButton" name="read_state_pushButton">
        <property name="text">
-        <string>state</string>
+        <string>read state</string>
        </property>
       </widget>
      </item>
@@ -251,7 +261,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="off_all_pushButton">
      <property name="text">
       <string>OFF all</string>
      </property>
