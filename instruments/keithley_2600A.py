@@ -8,7 +8,7 @@ Created on Wed Aug 16 14:47:39 2023
 import os
 import numpy as np
 import pyvisa
-from PyQt5 import QtWidgets, uic
+from PyQt6 import QtWidgets, uic
 from nanomol.instruments.visa_instrument import visa_instrument
 
 class keithley_2600A(visa_instrument):

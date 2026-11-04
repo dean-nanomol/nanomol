@@ -6,7 +6,7 @@ Created on Fri Jan 19 14:33:02 2024
 """
 
 import os
-from PyQt5 import QtWidgets, uic
+from PyQt6 import QtWidgets, uic
 from nanomol.instruments.serial_instrument import serial_instrument
 from nanomol.utils.interactive_ui import interactive_ui
 

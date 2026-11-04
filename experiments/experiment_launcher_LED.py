@@ -5,7 +5,7 @@ Created on Tue Sep  5 16:48:53 2023
 @author: deankos
 """
 
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
 from nanomol.utils.hdf5_viewer import hdf5_viewer

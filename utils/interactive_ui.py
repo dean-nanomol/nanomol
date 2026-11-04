@@ -5,7 +5,7 @@ Created on Tue Aug 22 16:53:20 2023
 @author: deankos
 """
 
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 
 class interactive_ui(QtWidgets.QWidget):
     """

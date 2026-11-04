@@ -9,7 +9,7 @@ import numpy as np
 import threading
 import time
 import os
-from PyQt5 import QtWidgets, uic
+from PyQt6 import QtWidgets, uic
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.instruments.arduino_shutter_controller import arduino_shutter_controller, arduino_shutter_controller_ui
 from nanomol.utils.interactive_ui import interactive_ui

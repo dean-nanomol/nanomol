@@ -8,7 +8,7 @@ Created on Wed Dec 13 12:39:43 2023
 import os
 import time
 import threading
-from PyQt5 import QtWidgets, uic
+from PyQt6 import QtWidgets, uic
 from nanomol.instruments.keithley_2600A import keithley_2600A
 from nanomol.utils.interactive_ui import interactive_ui
 

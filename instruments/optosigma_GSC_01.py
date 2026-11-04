@@ -8,7 +8,7 @@ Created on Wed Oct 18 16:47:42 2023
 import numpy as np
 import os
 import time
-from PyQt5 import QtWidgets, uic
+from PyQt6 import QtWidgets, uic
 from nanomol.instruments.serial_instrument import serial_instrument
 from nanomol.utils.interactive_ui import interactive_ui
 

@@ -35,7 +35,7 @@ import os
 import time
 import sys
 import serial
-from PyQt5 import QtWidgets, uic
+from PyQt6 import QtWidgets, uic
 
 
 class SerialInstrument:
