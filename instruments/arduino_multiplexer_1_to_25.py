@@ -318,6 +318,6 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = ArduinoMultiplexerUI(multiplexer)
     window.show()
-    app.exec_()
+    app.exec()
 
     multiplexer.close()

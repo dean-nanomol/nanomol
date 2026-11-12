@@ -9,9 +9,9 @@ import numpy as np
 import threading
 import time
 import os
-import pyqtgraph as pg
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import pyqtSignal
+import pyqtgraph as pg
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.interactive_ui import interactive_ui
 
@@ -25,6 +25,9 @@ class transistor_transfer(interactive_ui):
     """
     
     update_plots_signal = pyqtSignal()
+    # plots can only be modified from the main thread, the measurement thread requests it with these signals
+    clear_plots_signal = pyqtSignal()
+    create_new_plot_lines_signal = pyqtSignal(int, float)
     
     def __init__(self, smu,  datafile=None):
         super().__init__()
@@ -52,6 +55,8 @@ class transistor_transfer(interactive_ui):
         self.set_smu_interaction_mode()
         self.setup_plot_widgets()
         self.update_plots_signal.connect(self.update_plots)
+        self.clear_plots_signal.connect(self.clear_plots)
+        self.create_new_plot_lines_signal.connect(self.create_new_plot_lines)
         self.set_sweep_direction()  # sweep is the external loop, V1
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
@@ -93,7 +98,7 @@ class transistor_transfer(interactive_ui):
             
     def run_measurement(self):
         self.configure_measurement()
-        self.clear_plots()
+        self.clear_plots_signal.emit()
         # set channels to start from first point when output is turned on
         self.V1_active = self.V1[0]
         self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
@@ -110,7 +115,7 @@ class transistor_transfer(interactive_ui):
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                 # prepare new plot line for upcoming data
                 if self.live_plotting_checkBox.isChecked():
-                    self.create_new_plot_lines()
+                    self.create_new_plot_lines_signal.emit(self.color_index, float(self.V1_active))
                 self.color_index += 1
                 self.smu.set_output(self.V1_ch, 1)
                 self.smu.set_output(self.V2_ch, 1)
@@ -342,15 +347,21 @@ class transistor_transfer(interactive_ui):
         self.I2_vs_V2.addLegend()
         self.I1_vs_V2.addLegend()
         
-    def create_new_plot_lines(self):
-        color = pg.intColor(self.color_index, hues=self.V1.size*self.N_measurements)
+    def create_new_plot_lines(self, color_index, V1_active):
+        """
+        color_index : int
+            index of the new curve, sets the line color
+        V1_active : float
+            sweep voltage of the new curve, shown in the legend
+        """
+        color = pg.intColor(color_index, hues=self.V1.size*self.N_measurements)
         pen = pg.mkPen(color=color)
         self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
                                                 self.data[self.dataset_labels['measured_I2']],
-                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, V1_active) )
         self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
                                                 self.data[self.dataset_labels['measured_I1']],
-                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, V1_active) )
         
     def update_plots(self):
         self.I2_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],

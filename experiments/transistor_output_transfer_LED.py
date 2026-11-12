@@ -9,9 +9,9 @@ import numpy as np
 import threading
 import time
 import os
-import pyqtgraph as pg
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import pyqtSignal
+import pyqtgraph as pg
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.instruments.keithley_2600_LED_driver import keithley_2600_LED_driver_ui
 from nanomol.utils.interactive_ui import interactive_ui

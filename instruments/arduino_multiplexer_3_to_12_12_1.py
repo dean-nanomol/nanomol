@@ -137,6 +137,6 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = arduino_multiplexer_3_to_12_12_1_ui(multiplexer)
     window.show()
-    app.exec_()
+    app.exec()
 
     multiplexer.close()

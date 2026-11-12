@@ -9,9 +9,9 @@ import numpy as np
 import threading
 import time
 import os
-import pyqtgraph as pg
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import pyqtSignal
+import pyqtgraph as pg
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.interactive_ui import interactive_ui
 
@@ -25,11 +25,14 @@ class transistor_output(interactive_ui):
     """
     
     update_plots_signal = pyqtSignal()
+    # plots can only be modified from the main thread, the measurement thread requests it with these signals
+    clear_plots_signal = pyqtSignal()
+    create_new_plot_lines_signal = pyqtSignal(int, float)
     
     def __init__(self, smu,  datafile=None):
         super().__init__()
         if datafile is not None:
-            self.datafile = datafile
+            self.default_datafile = datafile
         self.smu = smu
         ui_file_path = os.path.join(os.path.dirname(__file__), 'transistor_output.ui')
         uic.loadUi(ui_file_path, self)
@@ -49,17 +52,40 @@ class transistor_output(interactive_ui):
         self.set_measurement_mode()
         self.setup_plot_widgets()
         self.update_plots_signal.connect(self.update_plots)
+        self.clear_plots_signal.connect(self.clear_plots)
+        self.create_new_plot_lines_signal.connect(self.create_new_plot_lines)
         self.set_sweep_direction()  # sweep is the external loop, V1
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
         self.set_curve_loop()
         self.measurement_is_running = False  # flag to start and stop a measurement
     
-    def start_measurement(self):
-        if not self.measurement_is_running:  # do nothing if measurement is already running
-            self.measurement_is_running = True
-            measurement_thread = threading.Thread(target=self.run_measurement)
-            measurement_thread.start()
+    def start_measurement(self, *args, datafile=None, path=None):
+        """
+        datafile : hdf5 datafile [optional, default=None]
+            hdf5 data file where data of the measurement will be saved. Useful when calling externally.
+            If passed must also pass data_path. If not passed defaults to saving to default_datafile.
+        
+        path : str [optional, default=None]
+            Path to hdf5 group within passed datafile where data is to be saved.
+            Usually generated within calling environment using hdf5_group.name
+            If not passed defaults to saving in root group of default_datafile.
+        """
+        # *args captures unnecessary arguments passed by qt buttons
+        if self.measurement_is_running:  # do nothing if measurement is already running
+            return
+        if datafile is not None:
+            self.datafile = datafile
+            self.data_path = datafile[path]
+        else:
+            if self.save_data_checkBox.isChecked():
+                self.datafile = self.default_datafile
+                self.data_path = self.datafile
+            else:
+                self.data_path = None
+        self.measurement_is_running = True
+        self.measurement_thread = threading.Thread(target=self.run_measurement)
+        self.measurement_thread.start()
             
     def stop_measurement(self):
         if self.measurement_is_running:
@@ -67,7 +93,7 @@ class transistor_output(interactive_ui):
             
     def run_measurement(self):
         self.configure_measurement()
-        self.clear_plots()
+        self.clear_plots_signal.emit()
         # set channels to start from first point when output is turned on
         self.V1_active = self.V1[0]
         self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
@@ -75,7 +101,7 @@ class transistor_output(interactive_ui):
         self.smu.set_output(self.V1_ch, 1)
         for self.measurement_counter in range(self.N_measurements):
             for self.V1_active in self.V1:
-                if self.save_data_checkBox.isChecked():
+                if self.data_path is not None:
                     self.save_curve_attrs()
                 # reset curve datasets for new curve
                 self.initialise_datasets()
@@ -84,7 +110,7 @@ class transistor_output(interactive_ui):
                 self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
                 # prepare new plot line for upcoming data
                 if self.live_plotting_checkBox.isChecked():
-                    self.create_new_plot_lines()
+                    self.create_new_plot_lines_signal.emit(self.color_index, float(self.V1_active))
                 self.color_index += 1
                 self.smu.set_output(self.V2_ch, 1)
                 if self.first_point_delay != 0:
@@ -112,12 +138,14 @@ class transistor_output(interactive_ui):
                     if self.delay_points != 0:
                         time.sleep(self.delay_points)
                 self.smu.set_output(self.V2_ch, 0)
-                if self.save_data_checkBox.isChecked():
+                if self.data_path is not None:
                     self.save_data()
                 if not self.measurement_is_running:
                     break
                 if self.delay_curves != 0:
                     time.sleep(self.delay_curves)
+            if not self.measurement_is_running:
+                break
         self.smu.set_output(self.V1_ch, 0)
         self.measurement_is_running = False
             
@@ -149,7 +177,7 @@ class transistor_output(interactive_ui):
         if self.curve_loop:
             self.V2 = np.append(self.V2, np.flip(self.V2) )
         # save measurement settings and attributes
-        if self.save_data_checkBox.isChecked():
+        if self.data_path is not None:
             self.save_sweep_attrs()
     
     def initialise_datasets(self):
@@ -159,8 +187,8 @@ class transistor_output(interactive_ui):
             self.data[label] = []
             
     def save_sweep_attrs(self):
-        active_sweep_name = self.datafile.get_unique_group_name(self.datafile, basename='sweep', max_N=1000)
-        self.active_sweep_group =  self.datafile.create_group(active_sweep_name)
+        active_sweep_name = self.datafile.get_unique_group_name(self.data_path, basename='sweep', max_N=1000)
+        self.active_sweep_group =  self.data_path.create_group(active_sweep_name)
         self.active_sweep_group.attrs.create('description', self.description)
         self.active_sweep_group.attrs.create('measurement_mode', self.measurement_mode)
         self.active_sweep_group.attrs.create('GS_channel', self.ch_GS)
@@ -185,7 +213,7 @@ class transistor_output(interactive_ui):
                 data = np.array(data)
                 data -= data[0]
             self.active_curve_group.create_dataset(dataset_name, data=np.array(data) )
-        self.datafile.flush()
+        self.data_path.file.flush()
     
     def set_measurement_mode(self):
         self.measurement_mode = 'output'
@@ -248,15 +276,21 @@ class transistor_output(interactive_ui):
         self.I2_vs_V2.addLegend()
         self.I1_vs_V2.addLegend()
         
-    def create_new_plot_lines(self):
-        color = pg.intColor(self.color_index, hues=self.V1.size*self.N_measurements)
+    def create_new_plot_lines(self, color_index, V1_active):
+        """
+        color_index : int
+            index of the new curve, sets the line color
+        V1_active : float
+            sweep voltage of the new curve, shown in the legend
+        """
+        color = pg.intColor(color_index, hues=self.V1.size*self.N_measurements)
         pen = pg.mkPen(color=color)
         self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
                                                 self.data[self.dataset_labels['measured_I2']],
-                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, V1_active) )
         self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.dataset_labels['measured_V2']],
                                                 self.data[self.dataset_labels['measured_I1']],
-                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, V1_active) )
         
     def update_plots(self):
         self.I2_vs_V2_line.setData(self.data[self.dataset_labels['measured_V2']],

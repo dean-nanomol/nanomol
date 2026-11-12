@@ -9,9 +9,9 @@ import numpy as np
 import threading
 import time
 import os
-import pyqtgraph as pg
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import pyqtSignal
+import pyqtgraph as pg
 from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
 from nanomol.utils.interactive_ui import interactive_ui
 from nanomol.utils.hdf5_datafile import hdf5_datafile
@@ -25,6 +25,9 @@ class current_vs_time(interactive_ui):
     """
     
     update_plots_signal = pyqtSignal()
+    # plots can only be modified from the main thread, the measurement thread requests it with these signals
+    clear_plots_signal = pyqtSignal()
+    create_new_plot_lines_signal = pyqtSignal()
     
     def __init__(self, datafile, smu):
         super().__init__()
@@ -38,23 +41,41 @@ class current_vs_time(interactive_ui):
         self.reset_plot_widgets_pushbutton.clicked.connect(self.setup_plot_widgets)
         self.shutdown_pushbutton.clicked.connect(self.shutdown)
         self.update_plots_signal.connect(self.update_plots)
+        self.clear_plots_signal.connect(self.clear_plots)
+        self.create_new_plot_lines_signal.connect(self.create_new_plot_lines)
         self.setup_plot_widgets()
         self.measurement_is_running = False
         
-    def start_measurement(self):
-        if not self.measurement_is_running:  # do nothing if measurement is already running
-            self.measurement_is_running = True
-            measurement_thread = threading.Thread(target=self.run_measurement)
-            measurement_thread.start()
+    def start_measurement(self, *args, datafile=None, path=None):
+        """
+        datafile : hdf5 datafile [optional, default=None]
+            hdf5 data file where data of the measurement will be saved. Useful when calling externally.
+            If passed must also pass path. If not passed defaults to the datafile given at object creation.
+        
+        path : str [optional, default=None]
+            Path to hdf5 group within passed datafile where data is to be saved.
+            Usually generated within calling environment using hdf5_group.name
+            If not passed defaults to saving in root group of the default datafile.
+        """
+        # *args captures unnecessary arguments passed by qt buttons
+        if self.measurement_is_running:  # do nothing if measurement is already running
+            return
+        if datafile is not None:
+            self.data_path = datafile[path]
+        else:
+            self.data_path = self.datafile
+        self.measurement_is_running = True
+        self.measurement_thread = threading.Thread(target=self.run_measurement)
+        self.measurement_thread.start()
             
     def stop_measurement(self):
         if self.measurement_is_running:
             self.measurement_is_running = False
             
     def run_measurement(self):
-        self.clear_plots()
+        self.clear_plots_signal.emit()
         self.configure_measurement()
-        self.create_new_plot_lines()
+        self.create_new_plot_lines_signal.emit()
         self.smu.set_source_level(self.ch_GS, 'v', self.V_GS)
         self.smu.set_source_level(self.ch_DS, 'v', self.V_DS)
         active_V_GS = self.V_GS
@@ -101,8 +122,8 @@ class current_vs_time(interactive_ui):
         
     def save_data(self):
         """ write data to hdf5 datafile """
-        active_group = self.datafile.get_unique_group_name(self.datafile, basename=self.description, max_N=100)
-        self.active_group =  self.datafile.create_group(active_group)
+        active_group = self.datafile.get_unique_group_name(self.data_path, basename=self.description, max_N=100)
+        self.active_group =  self.data_path.create_group(active_group)
         self.active_group.attrs.create('description', self.description)
         self.active_group.attrs.create('timestamp', self.timestamp)
         self.active_group.attrs.create('channel_GS', self.ch_GS)
@@ -111,7 +132,7 @@ class current_vs_time(interactive_ui):
             self.active_group.attrs.create('keithley_{}'.format(key), value)
         for dataset_name, data in self.data.items():
             self.active_group.create_dataset(dataset_name, data=np.array(data) )
-        self.datafile.flush()
+        self.data_path.file.flush()
     
     def setup_plot_widgets(self):
         self.plot_layout.removeWidget(self.I_DS_vs_time)
