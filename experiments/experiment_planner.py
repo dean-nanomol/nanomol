@@ -27,9 +27,11 @@ in settings_hints below.
 
 import inspect
 import json
+import os
 import re
 import sys
 import threading
+import time
 import traceback
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer, QRect, QSize, QPoint
@@ -310,6 +312,21 @@ def multiplexer_channel_settings(multiplexer_window):
         settings.append(checkbox_choice_setting(title.replace(' ', '_'), title, checkboxes))
     settings.sort(key=lambda setting: setting.name)
     return settings
+
+
+def format_duration(seconds):
+    """ duration in s as h:mm:ss, e.g. 3725 -> '1:02:05' """
+    minutes, seconds = divmod(int(round(seconds)), 60)
+    hours, minutes = divmod(minutes, 60)
+    return '{}:{:02d}:{:02d}'.format(hours, minutes, seconds)
+
+
+def format_clock_time(timestamp):
+    """ time of day of timestamp (from time.time()), with the date if it is not today """
+    local_time = time.localtime(timestamp)
+    if time.strftime('%Y-%m-%d', local_time) == time.strftime('%Y-%m-%d'):
+        return time.strftime('%H:%M', local_time)
+    return time.strftime('%a %d %b %H:%M', local_time)
 
 
 def is_measurement_action(experiment):
@@ -615,11 +632,11 @@ class action_group(QtWidgets.QFrame):
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
-        # group cell, with group number and buttons to move and remove the group
-        group_cell = QtWidgets.QFrame()
-        group_cell.setObjectName('table_cell')
-        group_cell.setFixedWidth(experiment_planner.group_column_width)
-        group_cell_layout = QtWidgets.QVBoxLayout(group_cell)
+        # group cell, with group number and buttons to move, copy and remove the group.
+        # Its width is set by experiment_planner.update_group_column_width() from its content
+        self.group_cell = QtWidgets.QFrame()
+        self.group_cell.setObjectName('table_cell')
+        group_cell_layout = QtWidgets.QVBoxLayout(self.group_cell)
         group_cell_layout.setContentsMargins(6, 6, 6, 6)
         self.number_label = QtWidgets.QLabel()
         number_font = QFont(self.font())
@@ -630,6 +647,7 @@ class action_group(QtWidgets.QFrame):
         buttons_layout.setSpacing(2)
         for text, tooltip, function in [('▲', 'move group up', lambda: self.planner.move_group(self, -1)),
                                         ('▼', 'move group down', lambda: self.planner.move_group(self, 1)),
+                                        ('copy', 'add a copy of this group below', lambda: self.planner.copy_group(self)),
                                         ('✕', 'remove group', lambda: self.planner.remove_group(self))]:
             button = QtWidgets.QToolButton()
             button.setText(text)
@@ -639,7 +657,7 @@ class action_group(QtWidgets.QFrame):
         buttons_layout.addStretch()
         group_cell_layout.addLayout(buttons_layout)
         group_cell_layout.addStretch()
-        layout.addWidget(group_cell)
+        layout.addWidget(self.group_cell)
         # actions of the group, followed by the button to add an action
         actions_widget = QtWidgets.QWidget()
         actions_layout = QtWidgets.QVBoxLayout(actions_widget)
@@ -710,7 +728,6 @@ class experiment_planner(QtWidgets.QWidget):
         instruments closed by the shut down button, for example [smu, multiplexer]
     """
 
-    group_column_width = 86
     action_column_width = 170
     repeat_cell_margins = 12  # left + right margins of the repeat cell, added to the width of its content
 
@@ -754,6 +771,10 @@ class experiment_planner(QtWidgets.QWidget):
         self.stop_pushbutton.setToolTip('stop the measurement that is running now and do not run the rest of the plan')
         self.save_plan_pushbutton = QtWidgets.QPushButton('save plan')
         self.load_plan_pushbutton = QtWidgets.QPushButton('load plan')
+        self.autosave_plan_checkBox = QtWidgets.QCheckBox('autosave plan')
+        self.autosave_plan_checkBox.setChecked(True)
+        self.autosave_plan_checkBox.setToolTip('when a plan is started, save it in the folder of the datafile,\n'
+                                               'as <datafile name>_plan_<number>.json. Existing files are not overwritten')
         self.start_pushbutton.clicked.connect(self.start_plan)
         self.skip_pushbutton.clicked.connect(self.skip_action)
         self.stop_pushbutton.clicked.connect(self.stop_plan)
@@ -769,7 +790,11 @@ class experiment_planner(QtWidgets.QWidget):
         self.progressBar.setRange(0, 1)
         self.progressBar.setValue(0)
         controls_layout.addWidget(self.progressBar, stretch=1)
+        # elapsed time and estimated time to the end of the plan, updated at the end of each action
+        self.time_label = QtWidgets.QLabel()
+        controls_layout.addWidget(self.time_label)
         controls_layout.addWidget(self.save_plan_pushbutton)
+        controls_layout.addWidget(self.autosave_plan_checkBox)
         controls_layout.addWidget(self.load_plan_pushbutton)
         controls_layout.addSpacing(20)
         controls_layout.addWidget(self.shutdown_pushbutton)
@@ -779,7 +804,7 @@ class experiment_planner(QtWidgets.QWidget):
         # table header
         header_layout = QtWidgets.QHBoxLayout()
         header_layout.setSpacing(2)
-        for text, width in [('group', self.group_column_width), ('action', self.action_column_width),
+        for text, width in [('group', 'content'), ('action', self.action_column_width),
                             ('action settings', None), ('repeat group # times', 'content')]:
             header_cell = QtWidgets.QFrame()
             header_cell.setObjectName('table_header')
@@ -791,9 +816,13 @@ class experiment_planner(QtWidgets.QWidget):
                 header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 header_layout.addWidget(header_cell, stretch=1)
             elif width == 'content':
-                # repeat column: as narrow as its content, the header text wraps onto several lines
-                header_label.setWordWrap(True)
-                self.repeat_header_cell, self.repeat_header_label = header_cell, header_label
+                # as narrow as the content of the column, see update_group_column_width() and update_repeat_column_width()
+                if text == 'group':
+                    self.group_header_cell = header_cell
+                else:
+                    # repeat column: the header text wraps onto several lines
+                    header_label.setWordWrap(True)
+                    self.repeat_header_cell, self.repeat_header_label = header_cell, header_label
                 header_layout.addWidget(header_cell)
             else:
                 header_cell.setFixedWidth(width)
@@ -840,10 +869,12 @@ class experiment_planner(QtWidgets.QWidget):
     def groups(self):
         return [self.groups_layout.itemAt(i).widget() for i in range(self.groups_layout.count())]
 
-    def add_group(self, group=None):
+    def add_group(self, group=None, index=None):
         """
         group : dict, optional
             as returned by action_group.get_group(). If None add a group with one action with default settings.
+        index : int, optional
+            position of the new group in the plan. If None add at the end.
 
         Returns
         problems : list of str
@@ -864,10 +895,17 @@ class experiment_planner(QtWidgets.QWidget):
                 else:
                     row = new_group.add_action(action)
                     problems.extend(row.problems)
-        self.groups_layout.addWidget(new_group)
+        self.groups_layout.insertWidget(self.groups_layout.count() if index is None else index, new_group)
         self.update_group_numbers()
+        self.update_group_column_width()
         self.update_repeat_column_width()
         return problems
+
+    def copy_group(self, group):
+        """ add a copy of group, with the same actions, settings and number of repeats, right below it """
+        problems = self.add_group(group.get_group(), index=self.groups_layout.indexOf(group) + 1)
+        for problem in problems:
+            self.log('    not copied: {}'.format(problem))
 
     def remove_group(self, group):
         self.groups_layout.removeWidget(group)
@@ -883,6 +921,18 @@ class experiment_planner(QtWidgets.QWidget):
             self.groups_layout.removeWidget(group)
             self.groups_layout.insertWidget(new_index, group)
             self.update_group_numbers()
+
+    def update_group_column_width(self):
+        """
+        Make the group column as wide as its content needs, i.e. the buttons of the group cells. The header
+        and every group cell get the same width so that the column stays aligned.
+        """
+        widths = [self.group_header_cell.sizeHint().width()]
+        widths += [group.group_cell.sizeHint().width() for group in self.groups()]
+        width = max(widths)
+        self.group_header_cell.setFixedWidth(width)
+        for group in self.groups():
+            group.group_cell.setFixedWidth(width)
 
     def update_repeat_column_width(self):
         """
@@ -973,6 +1023,30 @@ class experiment_planner(QtWidgets.QWidget):
                 json.dump(self.get_plan(), plan_file, indent=2, ensure_ascii=False)
             self.log('plan saved to {}'.format(filename))
 
+    def autosave_plan(self):
+        """
+        Save the plan that is starting in the folder of the datafile, named after the datafile and the hdf5
+        group of the plan, e.g. 2026-11-16_plan_003.json for group plan_003 of 2026-11-16.hdf5.
+        An existing file is never overwritten: a number is added to the name instead, e.g. 2026-11-16_plan_003_1.json
+
+        Returns
+        filename : str
+            path of the saved file
+        """
+        directory, datafile_name = os.path.split(os.path.abspath(self.datafile.filename))
+        basename = '{}_{}'.format(os.path.splitext(datafile_name)[0], self.plan_group.name.strip('/'))
+        counter = 0
+        while True:
+            name = basename if counter == 0 else '{}_{}'.format(basename, counter)
+            filename = os.path.join(directory, name + '.json')
+            try:
+                # mode 'x' creates the file, and fails if it exists, so that no file is overwritten
+                with open(filename, 'x', encoding='utf-8') as plan_file:
+                    json.dump(self.get_plan(), plan_file, indent=2, ensure_ascii=False)
+                return filename
+            except FileExistsError:
+                counter += 1
+
     def load_plan(self):
         """ replace the plan in the table with one saved with save_plan() """
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'load plan', '', 'plan (*.json)')
@@ -1007,7 +1081,8 @@ class experiment_planner(QtWidgets.QWidget):
                 for action_index, row in enumerate(group.rows()):
                     self.steps.append({'group': group, 'group_index': group_index,
                                        'repeat_index': repeat_index, 'N_repeats': N_repeats,
-                                       'row': row, 'action_index': action_index})
+                                       'row': row, 'action_index': action_index,
+                                       'action_name': row.action_comboBox.currentText()})
         if len(self.steps) == 0:
             self.log('cannot start plan: no actions in the plan')
             return
@@ -1020,6 +1095,13 @@ class experiment_planner(QtWidgets.QWidget):
         self.plan_group.attrs.create('timestamp', self.datafile.timestamp())
         self.plan_group.attrs.create('plan', json.dumps(self.get_plan(), ensure_ascii=False))
         self.datafile.flush()
+        if self.autosave_plan_checkBox.isChecked():
+            try:
+                self.log('plan saved to {}'.format(self.autosave_plan()))
+            except OSError as exception:
+                # the plan is also saved in the datafile, as attribute 'plan' of its group: run it anyway
+                self.log('could not autosave the plan: {}. It is saved in the datafile, attribute plan of {}'.format(
+                    exception, self.plan_group.name))
         self.plan_is_running = True
         self.stop_requested = False
         self.measurement_error = None
@@ -1029,6 +1111,10 @@ class experiment_planner(QtWidgets.QWidget):
         self.step_index = -1
         self.progressBar.setRange(0, len(self.steps))
         self.progressBar.setValue(0)
+        # time taken by the actions run, to estimate the time left. action name: [total time in s, number of actions]
+        self.plan_start_time = time.monotonic()
+        self.action_times = {}
+        self.update_time_label()
         for group in self.groups():
             group.repeat_progress_label.setText('')
         self.update_repeat_column_width()
@@ -1056,6 +1142,8 @@ class experiment_planner(QtWidgets.QWidget):
         self.status_label.setText('running {}'.format(description))
         self.log('started {}'.format(description))
         self.active_experiment = experiment
+        self.action_start_time = time.monotonic()
+        self.action_was_skipped = False
         try:
             action_data_group = self.create_action_data_group(step, action)
             if is_measurement_action(experiment):
@@ -1161,6 +1249,12 @@ class experiment_planner(QtWidgets.QWidget):
                 self.step_index + 1, len(self.steps)))
             return
         self.progressBar.setValue(self.step_index + 1)
+        # actions cut short by skip or stop would make the estimate too short
+        if not self.action_was_skipped and not self.stop_requested:
+            action_time = self.action_times.setdefault(self.steps[self.step_index]['action_name'], [0.0, 0])
+            action_time[0] += time.monotonic() - self.action_start_time
+            action_time[1] += 1
+        self.update_time_label()
         if self.stop_requested:
             self.finish_plan('plan stopped at action {} of {}'.format(self.step_index + 1, len(self.steps)))
         else:
@@ -1171,9 +1265,45 @@ class experiment_planner(QtWidgets.QWidget):
         self.measurement_error = ''.join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
         self.threading_excepthook(args)
 
+    def estimate_remaining_time(self):
+        """
+        Estimate the time needed by the actions of the plan not yet finished: each one takes the average time of
+        the actions of its type already run, or, if none of its type has run yet, the average time of all
+        actions run. Rough at the start of a plan, it improves as actions and groups repeat.
+
+        Returns
+        remaining : float or None
+            estimated time left in s, None if no action has finished yet
+        """
+        number_run = sum(number for total, number in self.action_times.values())
+        if number_run == 0:
+            return None
+        average_all = sum(total for total, number in self.action_times.values()) / number_run
+        remaining = 0
+        for step in self.steps[self.step_index + 1:]:
+            if step['action_name'] in self.action_times:
+                total, number = self.action_times[step['action_name']]
+                remaining += total / number
+            else:
+                remaining += average_all
+        return remaining
+
+    def update_time_label(self):
+        """ show the time since the start of the plan and the estimated time left, called at the end of each action """
+        elapsed = time.monotonic() - self.plan_start_time
+        text = 'elapsed {}'.format(format_duration(elapsed))
+        if self.plan_is_running and self.step_index + 1 < len(self.steps):
+            remaining = self.estimate_remaining_time()
+            if remaining is None:
+                text += '  |  ETA after the first action'
+            else:
+                text += '  |  ETA {}, {} left'.format(format_clock_time(time.time() + remaining), format_duration(remaining))
+        self.time_label.setText(text)
+
     def finish_plan(self, message):
         threading.excepthook = self.threading_excepthook
         self.plan_is_running = False
+        self.update_time_label()
         self.active_row = None
         self.active_experiment = None
         self.datafile.flush()
@@ -1185,6 +1315,7 @@ class experiment_planner(QtWidgets.QWidget):
         """ stop the measurement that is running, the plan continues with the next action """
         if self.plan_is_running and is_measurement_action(self.active_experiment):
             self.log('skipping action')
+            self.action_was_skipped = True
             self.status_label.setText('skipping action, waiting for the measurement to stop')
             self.active_experiment.stop_measurement()
 
