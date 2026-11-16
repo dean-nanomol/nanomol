@@ -1006,7 +1006,7 @@ if __name__ == '__main__' :
     from nanomol.experiments.current_vs_time import current_vs_time
 
     datafile = hdf5_datafile(mode='x')
-    smu = keithley_2600A('USB0::0x05E6::0x2604::4101847::INSTR')
+    smu = keithley_2600A('USB0::0x05E6::0x2612::4651966::INSTR')
 
     experiment_app = QtWidgets.QApplication([])
 
