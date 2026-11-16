@@ -8,6 +8,7 @@ Created on Mon May 13 17:16:24 2024
 import numpy as np
 import threading
 import time
+import traceback
 import os
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import pyqtSignal
@@ -97,63 +98,136 @@ class transistor_transfer(interactive_ui):
             self.measurement_is_running = False
             
     def run_measurement(self):
-        self.configure_measurement()
-        self.clear_plots_signal.emit()
-        # set channels to start from first point when output is turned on
-        self.V1_active = self.V1[0]
-        self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-        self.color_index = 0
-        self.smu.set_output(self.V1_ch, 1)
-        for self.measurement_counter in range(self.N_measurements):
-            for self.V1_active in self.V1:
-                if self.data_path is not None:
-                    self.save_curve_attrs()
-                # reset curve datasets for new curve
-                self.initialise_datasets()
-                self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-                self.V2_active = self.V2[0]
-                self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                # prepare new plot line for upcoming data
-                if self.live_plotting_checkBox.isChecked():
-                    self.create_new_plot_lines_signal.emit(self.color_index, float(self.V1_active))
-                self.color_index += 1
-                self.smu.set_output(self.V1_ch, 1)
-                self.smu.set_output(self.V2_ch, 1)
-                if self.first_point_delay != 0:
-                    time.sleep(self.first_point_delay)
-                t0 = time.time()
-                for self.V2_active in self.V2:
+        # used by end_measurement() to know which outputs to turn off and which data to save
+        self.channels_in_use = [self.ch_GS, self.ch_DS]
+        self.active_sweep_group = None
+        self.unsaved_data = False  # True while a curve is measured and not yet saved
+        error = None
+        try:
+            self.configure_measurement()
+            self.clear_plots_signal.emit()
+            # set channels to start from first point when output is turned on
+            self.V1_active = self.V1[0]
+            self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+            self.color_index = 0
+            self.smu.set_output(self.V1_ch, 1)
+            for self.measurement_counter in range(self.N_measurements):
+                for self.V1_active in self.V1:
+                    if self.data_path is not None:
+                        self.save_curve_attrs()
+                    # reset curve datasets for new curve
+                    self.initialise_datasets()
+                    self.unsaved_data = True
+                    self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+                    self.V2_active = self.V2[0]
                     self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                    measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
-                    measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
-                    compliance_V1 = self.smu.get_compliance(self.V1_ch)
-                    compliance_V2 = self.smu.get_compliance(self.V2_ch)
-                    self.data[self.dataset_labels['time']].append(time.time() - t0)
-                    self.data[self.dataset_labels['measured_V1']].append(measured_V1)
-                    self.data[self.dataset_labels['measured_I1']].append(measured_I1)
-                    self.data[self.dataset_labels['measured_V2']].append(measured_V2)
-                    self.data[self.dataset_labels['measured_I2']].append(measured_I2)
-                    self.data[self.dataset_labels['calculated_V1']].append(self.V1_active)
-                    self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
-                    self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
-                    self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
+                    # prepare new plot line for upcoming data
                     if self.live_plotting_checkBox.isChecked():
-                        self.update_plots_signal.emit()
+                        self.create_new_plot_lines_signal.emit(self.color_index, float(self.V1_active))
+                    self.color_index += 1
+                    self.smu.set_output(self.V1_ch, 1)
+                    self.smu.set_output(self.V2_ch, 1)
+                    if self.first_point_delay != 0:
+                        time.sleep(self.first_point_delay)
+                    t0 = time.time()
+                    for self.V2_active in self.V2:
+                        self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
+                        measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
+                        measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                        compliance_V1 = self.smu.get_compliance(self.V1_ch)
+                        compliance_V2 = self.smu.get_compliance(self.V2_ch)
+                        self.data[self.dataset_labels['time']].append(time.time() - t0)
+                        self.data[self.dataset_labels['measured_V1']].append(measured_V1)
+                        self.data[self.dataset_labels['measured_I1']].append(measured_I1)
+                        self.data[self.dataset_labels['measured_V2']].append(measured_V2)
+                        self.data[self.dataset_labels['measured_I2']].append(measured_I2)
+                        self.data[self.dataset_labels['calculated_V1']].append(self.V1_active)
+                        self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
+                        self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
+                        self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
+                        if self.live_plotting_checkBox.isChecked():
+                            self.update_plots_signal.emit()
+                        if not self.measurement_is_running:
+                            break
+                        if self.delay_points != 0:
+                            time.sleep(self.delay_points)
+                    self.set_to_idle(self.V1_ch)
+                    self.set_to_idle(self.V2_ch)
+                    # set before saving, so that end_measurement() does not try to save again if saving fails
+                    self.unsaved_data = False
+                    if self.data_path is not None:
+                        self.save_data()
                     if not self.measurement_is_running:
                         break
-                    if self.delay_points != 0:
-                        time.sleep(self.delay_points)
-                self.set_to_idle(self.V1_ch)
-                self.set_to_idle(self.V2_ch)
-                if self.data_path is not None:
-                    self.save_data()
+                    if self.delay_curves != 0:
+                        time.sleep(self.delay_curves)
                 if not self.measurement_is_running:
                     break
-                if self.delay_curves != 0:
-                    time.sleep(self.delay_curves)
-            if not self.measurement_is_running:
-                break
+        except BaseException as exception:
+            error = exception
+            raise
+        finally:
+            # always runs, also when the measurement is stopped by an error
+            self.end_measurement(error)
+            
+    def end_measurement(self, error=None, scripted=False):
+        """
+        Called at the end of every measurement, also when the measurement is stopped by an error.
+        If the measurement ended normally or was stopped by the user, the smu outputs are set as chosen in
+        idle behaviour. After an error the outputs are turned off, the data of the curve that was being
+        measured is saved, and the error message is saved as attribute 'error' of the sweep group and of
+        that curve group. Each step is attempted even if the previous one fails.
+        
+        error : BaseException or None
+            exception that stopped the measurement. None if it ended normally or was stopped by the user.
+        scripted : bool
+            True when called from run_scripted_measurement(). After an error the sweep running on the smu
+            is aborted, and the data of the curve being measured is read from the smu buffer.
+        """
+        cleanup_errors = []
+        if error is not None and scripted:
+            for ch in self.channels_in_use:
+                try:
+                    self.smu.abort(ch)
+                except Exception as exception:
+                    cleanup_errors.append(exception)
+        for ch in self.channels_in_use:
+            try:
+                if error is None:
+                    self.set_to_idle(ch)
+                else:
+                    self.smu.set_output(ch, 0)
+            except Exception as exception:
+                cleanup_errors.append(exception)
+        if error is not None and self.data_path is not None:
+            try:
+                self.save_data_after_error(error, scripted)
+            except Exception as exception:
+                cleanup_errors.append(exception)
         self.measurement_is_running = False
+        for exception in cleanup_errors:
+            print('Error while ending the measurement:')
+            traceback.print_exception(type(exception), exception, exception.__traceback__)
+        if len(cleanup_errors) > 0 and error is None:
+            # no other error is being raised: raise one, so that whoever started the measurement knows
+            raise RuntimeError('measurement did not end correctly, see the errors printed above') from cleanup_errors[0]
+    
+    def save_data_after_error(self, error, scripted=False):
+        """ save the error message, and the data of the curve that was being measured when the error happened """
+        error_message = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+        if self.active_sweep_group is not None:
+            self.active_sweep_group.attrs.create('error', error_message)
+            self.data_path.file.flush()
+        if self.unsaved_data:
+            # curve that was being measured when the error happened
+            if scripted:
+                self.save_smu_buffer_data()
+                self.active_curve_group.attrs.create('error', error_message)
+            else:
+                self.active_curve_group.attrs.create('error', error_message)
+                if len(self.data[self.dataset_labels['time']]) > 0:
+                    self.save_data()
+        self.data_path.file.flush()
             
     def configure_measurement(self):
         """
@@ -223,25 +297,38 @@ class transistor_transfer(interactive_ui):
         self.data_path.file.flush()
     
     def run_scripted_measurement(self):
-        self.configure_scripted_measurement()
-        for self.measurement_counter in range(self.N_measurements):
-            for self.V1_active in self.V1:
-                if self.first_point_delay != 0.0:
+        # used by end_measurement() to know which outputs to turn off and which data to save
+        self.channels_in_use = [self.ch_GS, self.ch_DS]
+        self.active_sweep_group = None
+        self.unsaved_data = False  # True while a curve is measured and not yet saved
+        error = None
+        try:
+            self.configure_scripted_measurement()
+            for self.measurement_counter in range(self.N_measurements):
+                for self.V1_active in self.V1:
+                    if self.first_point_delay != 0.0:
+                        self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+                        self.smu.set_source_level(self.V2_ch, 'v', self.V_script_start)
+                        self.smu.set_output(self.V1_ch, 1)
+                        self.smu.set_output(self.V2_ch, 1)
+                        time.sleep(self.first_point_delay)
                     self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-                    self.smu.set_source_level(self.V2_ch, 'v', self.V_script_start)
-                    self.smu.set_output(self.V1_ch, 1)
-                    self.smu.set_output(self.V2_ch, 1)
-                    time.sleep(self.first_point_delay)
-                self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-                self.smu.run_script_until_operation_complete(self.transfer_script_label, timeout=60000)
-                self.save_smu_buffer_data()
+                    # from here the smu buffer holds data of this curve, not yet saved
+                    self.unsaved_data = True
+                    self.smu.run_script_until_operation_complete(self.transfer_script_label, timeout=60000)
+                    # set before saving, so that end_measurement() does not try to save again if saving fails
+                    self.unsaved_data = False
+                    self.save_smu_buffer_data()
+                    if not self.measurement_is_running:
+                        break
                 if not self.measurement_is_running:
                     break
-            if not self.measurement_is_running:
-                break
-        self.measurement_is_running = False
-        self.set_to_idle(self.V1_ch)
-        self.set_to_idle(self.V2_ch)
+        except BaseException as exception:
+            error = exception
+            raise
+        finally:
+            # always runs, also when the measurement is stopped by an error
+            self.end_measurement(error, scripted=True)
     
     def configure_scripted_measurement(self):
         self.V1_ch, self.V2_ch = self.ch_DS, self.ch_GS

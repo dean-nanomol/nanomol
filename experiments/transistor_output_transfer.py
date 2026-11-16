@@ -8,6 +8,7 @@ Created on Tue Aug 22 12:02:09 2023
 import numpy as np
 import threading
 import time
+import traceback
 import os
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import pyqtSignal
@@ -26,6 +27,9 @@ class transistor_output_transfer(interactive_ui):
     """
     
     update_plots_signal = pyqtSignal()
+    # plots can only be modified from the main thread, the measurement thread requests it with these signals
+    clear_plots_signal = pyqtSignal()
+    create_new_plot_lines_signal = pyqtSignal(int, float)
     
     def __init__(self, datafile, smu):
         super().__init__()
@@ -53,6 +57,8 @@ class transistor_output_transfer(interactive_ui):
         self.set_measurement_mode()
         self.setup_plot_widgets()
         self.update_plots_signal.connect(self.update_plots)
+        self.clear_plots_signal.connect(self.clear_plots)
+        self.create_new_plot_lines_signal.connect(self.create_new_plot_lines)
         self.set_sweep_direction()  # sweep is the external loop, V1
         self.set_sweep_loop()
         self.set_curve_direction()  # curve is the internal loop, V2
@@ -70,65 +76,118 @@ class transistor_output_transfer(interactive_ui):
             self.measurement_is_running = False
             
     def run_measurement(self):
-        self.configure_measurement()
-        self.clear_plots()
-        # set channels to start from first point when output is turned on
-        self.V1_active = self.V1[0]
-        self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-        self.color_index = 0
-        self.smu.set_output(self.V1_ch, 1)
-        for self.measurement_counter in range(self.N_measurements):
-            for self.V1_active in self.V1:
-                active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
-                self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
-                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
-                self.active_curve_group.attrs.create('timestamp', timestamp )
-                self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
-                self.active_curve_group.attrs.create('measurement_counter', data=self.measurement_counter)
-                # reset curve datasets for new curve
-                self.initialise_datasets()
-                self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
-                self.V2_active = self.V2[0]
-                self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                # prepare new plot line for upcoming data
-                self.create_new_plot_lines()
-                self.color_index += 1
-                self.smu.set_output(self.V1_ch, 1)
-                self.smu.set_output(self.V2_ch, 1)
-                time.sleep(self.first_point_delay)
-                t0 = time.time()
-                for self.V2_active in self.V2:
+        # used by end_measurement() to know which outputs to turn off and which data to save
+        self.channels_in_use = [self.ch_GS, self.ch_DS]
+        self.active_sweep_group = None
+        self.unsaved_data = False  # True while a curve is measured and not yet saved
+        error = None
+        try:
+            self.configure_measurement()
+            self.clear_plots_signal.emit()
+            # set channels to start from first point when output is turned on
+            self.V1_active = self.V1[0]
+            self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+            self.color_index = 0
+            self.smu.set_output(self.V1_ch, 1)
+            for self.measurement_counter in range(self.N_measurements):
+                for self.V1_active in self.V1:
+                    active_curve_name = self.datafile.get_unique_group_name(self.active_sweep_group, basename='curve')
+                    self.active_curve_group = self.active_sweep_group.create_group(active_curve_name)
+                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()) )
+                    self.active_curve_group.attrs.create('timestamp', timestamp )
+                    self.active_curve_group.attrs.create('V_{}'.format(self.V1_label), data=self.V1_active)
+                    self.active_curve_group.attrs.create('measurement_counter', data=self.measurement_counter)
+                    # reset curve datasets for new curve
+                    self.initialise_datasets()
+                    self.unsaved_data = True
+                    self.smu.set_source_level(self.V1_ch, 'v', self.V1_active)
+                    self.V2_active = self.V2[0]
                     self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
-                    measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
-                    measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
-                    #compliance_V1 = self.smu.get_compliance(self.V1_ch)
-                    #compliance_V2 = self.smu.get_compliance(self.V2_ch)
-                    self.data[self.dataset_labels['time']].append(time.time() - t0)
-                    self.data[self.dataset_labels['measured_V1']].append(measured_V1)
-                    self.data[self.dataset_labels['measured_I1']].append(measured_I1)
-                    self.data[self.dataset_labels['measured_V2']].append(measured_V2)
-                    self.data[self.dataset_labels['measured_I2']].append(measured_I2)
-                    self.data[self.dataset_labels['calculated_V1']].append(self.V1_active)
-                    self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
-                    #self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
-                    #self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
-                    self.update_plots_signal.emit()
+                    # prepare new plot line for upcoming data
+                    self.create_new_plot_lines_signal.emit(self.color_index, float(self.V1_active))
+                    self.color_index += 1
+                    self.smu.set_output(self.V1_ch, 1)
+                    self.smu.set_output(self.V2_ch, 1)
+                    time.sleep(self.first_point_delay)
+                    t0 = time.time()
+                    for self.V2_active in self.V2:
+                        self.smu.set_source_level(self.V2_ch, 'v', self.V2_active)
+                        measured_I1, measured_V1 = self.smu.measure(self.V1_ch, 'iv')
+                        measured_I2, measured_V2 = self.smu.measure(self.V2_ch, 'iv')
+                        #compliance_V1 = self.smu.get_compliance(self.V1_ch)
+                        #compliance_V2 = self.smu.get_compliance(self.V2_ch)
+                        self.data[self.dataset_labels['time']].append(time.time() - t0)
+                        self.data[self.dataset_labels['measured_V1']].append(measured_V1)
+                        self.data[self.dataset_labels['measured_I1']].append(measured_I1)
+                        self.data[self.dataset_labels['measured_V2']].append(measured_V2)
+                        self.data[self.dataset_labels['measured_I2']].append(measured_I2)
+                        self.data[self.dataset_labels['calculated_V1']].append(self.V1_active)
+                        self.data[self.dataset_labels['calculated_V2']].append(self.V2_active)
+                        #self.data[self.dataset_labels['compliance_V1']].append(compliance_V1)
+                        #self.data[self.dataset_labels['compliance_V2']].append(compliance_V2)
+                        self.update_plots_signal.emit()
+                        if not self.measurement_is_running:
+                            break
+                        if self.delay_points != 0:
+                            time.sleep(self.delay_points)
+                    self.smu.set_output(self.V1_ch, 0)
+                    self.smu.set_output(self.V2_ch, 0)
+                    # set before saving, so that end_measurement() does not try to save again if saving fails
+                    self.unsaved_data = False
+                    self.save_data()
                     if not self.measurement_is_running:
                         break
-                    if self.delay_points != 0:
-                        time.sleep(self.delay_points)
-                self.smu.set_output(self.V1_ch, 0)
-                self.smu.set_output(self.V2_ch, 0)
-                self.save_data()
+                    if self.delay_curves != 0:
+                        time.sleep(self.delay_curves)
                 if not self.measurement_is_running:
                     break
-                if self.delay_curves != 0:
-                    time.sleep(self.delay_curves)
-            if not self.measurement_is_running:
-                break
-        self.smu.set_output(self.V1_ch, 0)
-        self.measurement_is_running = False
+        except BaseException as exception:
+            error = exception
+            raise
+        finally:
+            # always runs, also when the measurement is stopped by an error
+            self.end_measurement(error)
             
+    def end_measurement(self, error=None):
+        """
+        Called at the end of every measurement, also when the measurement is stopped by an error.
+        Turns off the smu outputs. After an error, saves the data of the curve that was being measured,
+        and the error message as attribute 'error' of the sweep group and of that curve group.
+        Each step is attempted even if the previous one fails.
+        
+        error : BaseException or None
+            exception that stopped the measurement. None if it ended normally or was stopped by the user.
+        """
+        cleanup_errors = []
+        for ch in self.channels_in_use:
+            try:
+                self.smu.set_output(ch, 0)
+            except Exception as exception:
+                cleanup_errors.append(exception)
+        if error is not None:
+            try:
+                self.save_data_after_error(error)
+            except Exception as exception:
+                cleanup_errors.append(exception)
+        self.measurement_is_running = False
+        for exception in cleanup_errors:
+            print('Error while ending the measurement:')
+            traceback.print_exception(type(exception), exception, exception.__traceback__)
+        if len(cleanup_errors) > 0 and error is None:
+            # no other error is being raised: raise one, so that whoever started the measurement knows
+            raise RuntimeError('measurement did not end correctly, see the errors printed above') from cleanup_errors[0]
+    
+    def save_data_after_error(self, error):
+        """ save the error message, and the data of the curve that was being measured when the error happened """
+        error_message = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+        if self.active_sweep_group is not None:
+            self.active_sweep_group.attrs.create('error', error_message)
+        if self.unsaved_data:
+            # curve that was being measured when the error happened
+            self.active_curve_group.attrs.create('error', error_message)
+            if len(self.data[self.dataset_labels['time']]) > 0:
+                self.save_data()
+        self.datafile.flush()
     
     def configure_measurement(self):
         """
@@ -254,15 +313,21 @@ class transistor_output_transfer(interactive_ui):
         self.I2_vs_V2.addLegend()
         self.I1_vs_V2.addLegend()
         
-    def create_new_plot_lines(self):
-        color = pg.intColor(self.color_index, hues=self.V1.size*self.N_measurements)
+    def create_new_plot_lines(self, color_index, V1_active):
+        """
+        color_index : int
+            index of the new curve, sets the line color
+        V1_active : float
+            sweep voltage of the new curve, shown in the legend
+        """
+        color = pg.intColor(color_index, hues=self.V1.size*self.N_measurements)
         pen = pg.mkPen(color=color)
         self.I2_vs_V2_line = self.I2_vs_V2.plot(self.data[self.dataset_labels['calculated_V2']],
                                                 self.data[self.dataset_labels['measured_I2']],
-                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, V1_active) )
         self.I1_vs_V2_line = self.I1_vs_V2.plot(self.data[self.dataset_labels['calculated_V2']],
                                                 self.data[self.dataset_labels['measured_I1']],
-                                                pen=pen, name='V_{}={}'.format(self.V1_label, self.V1_active) )
+                                                pen=pen, name='V_{}={}'.format(self.V1_label, V1_active) )
         
     def update_plots(self):
         self.I2_vs_V2_line.setData(self.data[self.dataset_labels['calculated_V2']],

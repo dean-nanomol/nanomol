@@ -235,10 +235,12 @@ class keithley_2600A(visa_instrument):
         script_name : str, optional
             Name assigned to script in instrument runtime environment. If script_name='' set as anonymous script.
         """
-        self.write('loadscript {}'.format(script_name))
-        for command in script:
-            self.write(command)
-        self.write('endscript')
+        # hold the lock for the whole script, so that commands from other threads do not end up inside it
+        with self.lock:
+            self.write('loadscript {}'.format(script_name))
+            for command in script:
+                self.write(command)
+            self.write('endscript')
         
     def run_script(self, script_name=None):
         """
