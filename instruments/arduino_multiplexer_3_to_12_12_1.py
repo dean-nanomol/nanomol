@@ -132,11 +132,11 @@ class arduino_multiplexer_3_to_12_12_1_ui(interactive_ui):
 
 
 if __name__ == "__main__":
-    multiplexer = arduino_multiplexer_3_to_12_12_1('COM10')
+    multiplexer = arduino_multiplexer_3_to_12_12_1('COM4')
 
     app = QtWidgets.QApplication(sys.argv)
     window = arduino_multiplexer_3_to_12_12_1_ui(multiplexer)
     window.show()
-    app.exec_()
+    app.exec()
 
     multiplexer.close()
