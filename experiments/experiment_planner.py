@@ -1413,7 +1413,7 @@ if __name__ == '__main__' :
 
     datafile = hdf5_datafile(mode='x')
     smu = keithley_2600A('USB0::0x05E6::0x2612::4651966::INSTR')
-    multiplexer = arduino_multiplexer_3_to_12_12_1('COM10')
+    multiplexer = arduino_multiplexer_3_to_12_12_1('COM4')
 
     experiment_app = QtWidgets.QApplication([])
 
