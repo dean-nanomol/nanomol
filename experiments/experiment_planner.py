@@ -5,25 +5,30 @@ Experiment planner: make a list of measurements and run them one after the other
 The plan is a table of groups. Each group holds one or more actions (measurements), each with its
 own settings, and can be repeated a number of times. Groups are run from top to bottom.
 
-The planner does not measure anything itself. Each action type is one of the existing experiment
-modules (transistor_transfer, transistor_output, current_vs_time, ...). For each action the planner
-copies the settings of that table row into the experiment window, starts the measurement, waits
-until it has finished, and moves on to the next action.
+The planner does not measure anything itself. Each action type is one of the existing windows
+(transistor_transfer, transistor_output, current_vs_time, keithley_2600A_ui, ...). There are two kinds
+of actions:
+    - measurement actions: the planner copies the settings of the table row into the experiment window,
+      starts the measurement, waits until it has finished, and moves on to the next action.
+    - settings actions, e.g. instrument settings or the multiplexer: the planner copies the settings
+      into the window, which sends them to the instrument as when a user changes its widgets, then
+      moves on to the next action.
 
-To make a new experiment available in the planner, pass it in the experiments dictionary when
-creating the planner. The experiment must be a widget with:
-    - settings widgets named as in interactive_ui (e.g. V_GS_doubleSpinBox). These are found
-      automatically and become the action settings in the table
+To make a new window available in the planner, pass it in the experiments dictionary when creating
+the planner. Its settings are the widgets named as in interactive_ui (e.g. V_GS_doubleSpinBox), found
+automatically. A measurement window must also have:
     - start_measurement(datafile=..., path=...) to start the measurement in a thread and save data
       in the hdf5 group at path
     - stop_measurement()
     - measurement_is_running flag and measurement_thread attribute
-Labels, order and default values of the settings can be adjusted in settings_hints below.
+Any other window is a settings action. Labels, order and default values of the settings can be adjusted
+in settings_hints below.
 """
 
 import inspect
 import json
 import re
+import sys
 import threading
 import traceback
 from PyQt6 import QtWidgets
@@ -36,6 +41,15 @@ from PyQt6.QtGui import QFont
 # hidden : settings not shown in the table. They stay as they are set in the experiment window.
 # defaults : setting name -> value used for a new action. Settings without a default use the value that
 #            the experiment window has when the planner is created.
+# settings : function(window) returning the list of settings, instead of finding them from the widget names.
+# record_in_measurements : the current settings of this window are saved as attributes of the hdf5 group of
+#         every measurement action, named <record_in_measurements>_<setting name>.
+keithley_channel_settings = ['V_source_range', 'V_source_limit', 'V_measure_range',
+                             'I_source_range', 'I_source_limit', 'I_measure_range', 'nplc']
+keithley_labels = {'V_source_range': 'V source range [V]', 'V_source_limit': 'V source limit [V]',
+                   'V_measure_range': 'V measure range [V]', 'I_source_range': 'I source range [A]',
+                   'I_source_limit': 'I source limit [A]', 'I_measure_range': 'I measure range [A]',
+                   'nplc': 'measure nplc'}
 settings_hints = {
     'transistor_transfer': {
         'labels': {'V_DS_min_transfer': 'V_DS min [V]',
@@ -89,6 +103,15 @@ settings_hints = {
         'order': ['V_GS', 'V_DS', 't_limit', 'ch_GS', 'ch_DS', 'description'],
         # in the experiment window the default time limit is -1, which runs until stopped manually
         'defaults': {'t_limit': 60.0},
+        },
+    'keithley_2600A_ui': {
+        'labels': {'{}_{}'.format(name, ch): '{}: {}'.format(ch.upper(), label)
+                   for name, label in keithley_labels.items() for ch in 'ab'},
+        'order': ['{}_{}'.format(name, ch) for ch in 'ab' for name in keithley_channel_settings],
+        },
+    'arduino_multiplexer_3_to_12_12_1_ui': {
+        'settings': lambda window: multiplexer_channel_settings(window),
+        'record_in_measurements': 'multiplexer',
         },
     }
 
@@ -155,6 +178,11 @@ class experiment_setting():
                     # experiments update their attributes when a radiobutton is clicked
                     radiobutton.clicked.emit(True)
 
+    def choices(self):
+        """ options of a 'choice' setting, as shown in its drop-down menu """
+        widget = self.widgets[0]
+        return [widget.itemText(i) for i in range(widget.count())]
+
     def create_editor(self):
         """
         Returns
@@ -177,7 +205,7 @@ class experiment_setting():
             editor.setFixedWidth(130)
         elif self.kind == 'choice':
             editor = QtWidgets.QComboBox()
-            editor.addItems([widget.itemText(i) for i in range(widget.count())])
+            editor.addItems(self.choices())
         elif self.kind == 'bool':
             editor = QtWidgets.QCheckBox()
         elif self.kind == 'option':
@@ -225,6 +253,70 @@ class experiment_setting():
         return True
 
 
+class checkbox_choice_setting(experiment_setting):
+    """
+    Group of checkboxes of which one, or none, is checked, shown in the planner as a drop-down menu.
+    Used for the channels of the multiplexer, where each checkbox switches one pin.
+    Values are the text of the checked checkbox, e.g. 'pin 8', or 'off' if none is checked.
+    """
+
+    off = 'off'
+
+    def __init__(self, name, label, checkboxes):
+        super().__init__(name, label, 'choice', checkboxes)
+
+    def choices(self):
+        return [self.off] + [checkbox.text() for checkbox in self.widgets]
+
+    def get_value(self):
+        checked = [checkbox.text() for checkbox in self.widgets if checkbox.isChecked()]
+        if len(checked) == 0:
+            return self.off
+        # more than one only if pins were switched in the window without exclusive mode
+        return ', '.join(checked)
+
+    def set_value(self, value):
+        """
+        Check the checkbox whose text is value, uncheck the others. The checkboxes to uncheck are changed
+        first, so that the window switches pins OFF before switching the new pin ON.
+        """
+        for checkbox in self.widgets:
+            if checkbox.text() != value:
+                checkbox.setChecked(False)
+        for checkbox in self.widgets:
+            if checkbox.text() == value:
+                checkbox.setChecked(True)
+
+
+def multiplexer_channel_settings(multiplexer_window):
+    """
+    One setting for each channel of the multiplexer window, i.e. each group box of pin checkboxes,
+    to choose which pin of the channel is ON.
+
+    multiplexer_window : arduino_multiplexer_3_to_12_12_1_ui
+
+    Returns
+    settings : list of checkbox_choice_setting
+    """
+    settings = []
+    for groupbox in multiplexer_window.findChildren(QtWidgets.QGroupBox):
+        checkboxes = [checkbox for checkbox in groupbox.findChildren(QtWidgets.QCheckBox)
+                      if checkbox in multiplexer_window.pin_checkboxes]
+        if len(checkboxes) == 0:
+            continue
+        # sort by pin number
+        checkboxes.sort(key=multiplexer_window.pin_checkboxes.index)
+        title = groupbox.title().strip()
+        settings.append(checkbox_choice_setting(title.replace(' ', '_'), title, checkboxes))
+    settings.sort(key=lambda setting: setting.name)
+    return settings
+
+
+def is_measurement_action(experiment):
+    """ measurement actions start a measurement, all other actions only change settings """
+    return hasattr(experiment, 'start_measurement')
+
+
 def get_experiment_settings(experiment):
     """
     Find the settings of an experiment from the widgets of its window.
@@ -237,6 +329,25 @@ def get_experiment_settings(experiment):
     """
     hints = settings_hints.get(type(experiment).__name__, {})
     labels = hints.get('labels', {})
+    if 'settings' in hints:
+        settings = {setting.name: setting for setting in hints['settings'](experiment)}
+    else:
+        settings = find_widget_settings(experiment, labels)
+    for name, setting in settings.items():
+        setting.default = hints.get('defaults', {}).get(name, setting.get_value())
+    names = [name for name in hints.get('order', []) if name in settings]
+    names += [name for name in settings if name not in names]
+    return [settings[name] for name in names if name not in hints.get('hidden', [])]
+
+
+def find_widget_settings(experiment, labels):
+    """
+    Find the settings of an experiment from the names of the widgets of its window.
+
+    Returns
+    settings : dict
+        {setting name: experiment_setting}, in the order of the widgets in the window
+    """
     widget_kinds = [(QtWidgets.QDoubleSpinBox, 'float'), (QtWidgets.QSpinBox, 'int'), (QtWidgets.QLineEdit, 'text'),
                     (QtWidgets.QComboBox, 'choice'), (QtWidgets.QCheckBox, 'bool')]
     settings = {}  # setting name : experiment_setting
@@ -265,11 +376,7 @@ def get_experiment_settings(experiment):
                 name = experiment_setting.strip_widget_type(widget_name)
                 settings[name] = experiment_setting(name, labels.get(name, default_label(name)), kind, [widget])
                 break
-    for name, setting in settings.items():
-        setting.default = hints.get('defaults', {}).get(name, setting.get_value())
-    names = [name for name in hints.get('order', []) if name in settings]
-    names += [name for name in settings if name not in names]
-    return [settings[name] for name in names if name not in hints.get('hidden', [])]
+    return settings
 
 
 def default_label(name):
@@ -418,6 +525,20 @@ class action_row(QtWidgets.QFrame):
         self.editors = {}
         label_font = QFont(self.font())
         label_font.setPointSizeF(label_font.pointSizeF() * 0.85)
+        # button to copy the settings from the window of the action, with an empty label to align it with the editors
+        load_widget = QtWidgets.QWidget()
+        load_layout = QtWidgets.QVBoxLayout(load_widget)
+        load_layout.setContentsMargins(0, 0, 0, 0)
+        load_layout.setSpacing(1)
+        load_label = QtWidgets.QLabel(' ')
+        load_label.setFont(label_font)
+        load_layout.addWidget(load_label)
+        self.load_from_window_pushbutton = QtWidgets.QToolButton()
+        self.load_from_window_pushbutton.setText('load from window')
+        self.load_from_window_pushbutton.setToolTip('copy all settings of this action from its window, as they are now')
+        self.load_from_window_pushbutton.clicked.connect(self.load_from_window)
+        load_layout.addWidget(self.load_from_window_pushbutton)
+        self.settings_layout.addWidget(load_widget)
         for setting in self.planner.experiment_settings[self.action_comboBox.currentText()]:
             editor = setting.create_editor()
             setting_widget = QtWidgets.QWidget()
@@ -431,6 +552,18 @@ class action_row(QtWidgets.QFrame):
             setting_widget.setToolTip(setting.label)
             self.settings_layout.addWidget(setting_widget)
             self.editors[setting.name] = (setting, editor)
+
+    def load_from_window(self):
+        """ copy the current settings of the window of the action into this row """
+        action_name = self.action_comboBox.currentText()
+        problems = []
+        for name, (setting, editor) in self.editors.items():
+            value = setting.get_value()
+            if not setting.write_editor(editor, value):
+                problems.append('{}: value {} of {} cannot be set in the planner'.format(action_name, value, name))
+        self.planner.log('loaded settings of {} from its window'.format(action_name))
+        for problem in problems:
+            self.planner.log('    not loaded: {}'.format(problem))
 
     def get_action(self):
         """
@@ -525,11 +658,10 @@ class action_group(QtWidgets.QFrame):
         add_action_layout.addStretch()
         actions_layout.addWidget(add_action_cell)
         layout.addWidget(actions_widget, stretch=1)
-        # repeat cell
-        repeat_cell = QtWidgets.QFrame()
-        repeat_cell.setObjectName('table_cell')
-        repeat_cell.setFixedWidth(experiment_planner.repeat_column_width)
-        repeat_cell_layout = QtWidgets.QVBoxLayout(repeat_cell)
+        # repeat cell. Its width is set by experiment_planner.update_repeat_column_width() from its content
+        self.repeat_cell = QtWidgets.QFrame()
+        self.repeat_cell.setObjectName('table_cell')
+        repeat_cell_layout = QtWidgets.QVBoxLayout(self.repeat_cell)
         repeat_cell_layout.setContentsMargins(6, 6, 6, 6)
         self.repeat_spinBox = QtWidgets.QSpinBox()
         self.repeat_spinBox.setRange(1, 99999)
@@ -539,7 +671,7 @@ class action_group(QtWidgets.QFrame):
         self.repeat_progress_label = QtWidgets.QLabel()
         repeat_cell_layout.addWidget(self.repeat_progress_label)
         repeat_cell_layout.addStretch()
-        layout.addWidget(repeat_cell)
+        layout.addWidget(self.repeat_cell)
 
     def rows(self):
         return [self.rows_layout.itemAt(i).widget() for i in range(self.rows_layout.count())]
@@ -571,18 +703,23 @@ class experiment_planner(QtWidgets.QWidget):
     datafile : hdf5_datafile
         data file where the data of all measurements of a plan is saved
     experiments : dict
-        {name: experiment}. name is shown in the action drop-down menu, experiment is the object
-        that does the measurement, for example transistor_transfer(smu, datafile=datafile).
+        {name: window}. name is shown in the action drop-down menu, window is the object that does the
+        measurement, for example transistor_transfer(smu, datafile=datafile), or a settings window, for
+        example keithley_2600A_ui(smu).
+    instruments : list, optional
+        instruments closed by the shut down button, for example [smu, multiplexer]
     """
 
     group_column_width = 86
     action_column_width = 170
-    repeat_column_width = 150
+    repeat_cell_margins = 12  # left + right margins of the repeat cell, added to the width of its content
 
-    def __init__(self, datafile, experiments):
+    def __init__(self, datafile, experiments, instruments=None):
         super().__init__()
         self.datafile = datafile
         self.experiments = experiments
+        self.instruments = instruments if instruments is not None else []
+        self.is_shut_down = False
         self.experiment_settings = {name: get_experiment_settings(experiment)
                                     for name, experiment in experiments.items()}
         self.plan_is_running = False
@@ -622,6 +759,9 @@ class experiment_planner(QtWidgets.QWidget):
         self.stop_pushbutton.clicked.connect(self.stop_plan)
         self.save_plan_pushbutton.clicked.connect(self.save_plan)
         self.load_plan_pushbutton.clicked.connect(self.load_plan)
+        self.shutdown_pushbutton = QtWidgets.QPushButton('shut down')
+        self.shutdown_pushbutton.setToolTip('close the datafile and the connections to the instruments')
+        self.shutdown_pushbutton.clicked.connect(self.shutdown)
         for button in [self.start_pushbutton, self.skip_pushbutton, self.stop_pushbutton]:
             controls_layout.addWidget(button)
         self.progressBar = QtWidgets.QProgressBar()
@@ -631,6 +771,8 @@ class experiment_planner(QtWidgets.QWidget):
         controls_layout.addWidget(self.progressBar, stretch=1)
         controls_layout.addWidget(self.save_plan_pushbutton)
         controls_layout.addWidget(self.load_plan_pushbutton)
+        controls_layout.addSpacing(20)
+        controls_layout.addWidget(self.shutdown_pushbutton)
         layout.addLayout(controls_layout)
         self.status_label = QtWidgets.QLabel('plan not running')
         layout.addWidget(self.status_label)
@@ -638,19 +780,24 @@ class experiment_planner(QtWidgets.QWidget):
         header_layout = QtWidgets.QHBoxLayout()
         header_layout.setSpacing(2)
         for text, width in [('group', self.group_column_width), ('action', self.action_column_width),
-                            ('action settings', None), ('repeat group # times', self.repeat_column_width)]:
+                            ('action settings', None), ('repeat group # times', 'content')]:
             header_cell = QtWidgets.QFrame()
             header_cell.setObjectName('table_header')
             header_cell_layout = QtWidgets.QHBoxLayout(header_cell)
             header_cell_layout.setContentsMargins(6, 6, 6, 6)
             header_label = QtWidgets.QLabel(text)
             header_cell_layout.addWidget(header_label)
-            if width is not None:
-                header_cell.setFixedWidth(width)
-                header_layout.addWidget(header_cell)
-            else:
+            if width is None:
                 header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 header_layout.addWidget(header_cell, stretch=1)
+            elif width == 'content':
+                # repeat column: as narrow as its content, the header text wraps onto several lines
+                header_label.setWordWrap(True)
+                self.repeat_header_cell, self.repeat_header_label = header_cell, header_label
+                header_layout.addWidget(header_cell)
+            else:
+                header_cell.setFixedWidth(width)
+                header_layout.addWidget(header_cell)
         # table of groups, in a scroll area so the plan can be arbitrarily long
         self.table_widget = QtWidgets.QWidget()
         self.table_widget.setObjectName('plan_table')
@@ -719,6 +866,7 @@ class experiment_planner(QtWidgets.QWidget):
                     problems.extend(row.problems)
         self.groups_layout.addWidget(new_group)
         self.update_group_numbers()
+        self.update_repeat_column_width()
         return problems
 
     def remove_group(self, group):
@@ -735,6 +883,22 @@ class experiment_planner(QtWidgets.QWidget):
             self.groups_layout.removeWidget(group)
             self.groups_layout.insertWidget(new_index, group)
             self.update_group_numbers()
+
+    def update_repeat_column_width(self):
+        """
+        Make the repeat column as wide as its content needs: the repeat spin boxes, the progress labels,
+        and the longest word of the header, which wraps onto several lines. All cells of the column, in
+        the header and in every group, get the same width so that the column stays aligned.
+        """
+        font_metrics = self.repeat_header_label.fontMetrics()
+        widths = [font_metrics.horizontalAdvance(word) for word in self.repeat_header_label.text().split()]
+        for group in self.groups():
+            widths.append(group.repeat_spinBox.sizeHint().width())
+            widths.append(group.repeat_progress_label.sizeHint().width())
+        width = max(widths) + self.repeat_cell_margins
+        self.repeat_header_cell.setFixedWidth(width)
+        for group in self.groups():
+            group.repeat_cell.setFixedWidth(width)
 
     def update_group_numbers(self):
         for i, group in enumerate(self.groups()):
@@ -832,7 +996,7 @@ class experiment_planner(QtWidgets.QWidget):
         if self.plan_is_running:
             return
         for name, experiment in self.experiments.items():
-            if experiment.measurement_is_running:
+            if getattr(experiment, 'measurement_is_running', False):
                 self.log('cannot start plan: a {} measurement is already running'.format(name))
                 return
         # list all actions to run, in order
@@ -867,6 +1031,7 @@ class experiment_planner(QtWidgets.QWidget):
         self.progressBar.setValue(0)
         for group in self.groups():
             group.repeat_progress_label.setText('')
+        self.update_repeat_column_width()
         self.set_plan_controls()
         self.log('plan started, {} actions, saving in {}'.format(len(self.steps), self.plan_group.name))
         self.start_next_action()
@@ -880,56 +1045,115 @@ class experiment_planner(QtWidgets.QWidget):
         action = step['row'].get_action()
         action_name = action['action']
         experiment = self.experiments[action_name]
-        # copy settings of the table row to the experiment window
-        for setting in self.experiment_settings[action_name]:
-            setting.set_value(action['settings'][setting.name])
-        # hdf5 group where the measurement saves its data
-        repeat_group_name = 'group_{}_repeat_{:0{}d}'.format(step['group_index'] + 1, step['repeat_index'],
-                                                            max(3, len(str(step['N_repeats'] - 1))))
-        repeat_group = self.plan_group.require_group(repeat_group_name)
-        action_group_name = 'action_{}_{}'.format(step['action_index'] + 1, action_name.replace(' ', '_'))
-        action_data_group = repeat_group.create_group(action_group_name)
-        action_data_group.attrs.create('timestamp', self.datafile.timestamp())
-        action_data_group.attrs.create('action', action_name)
-        for name, value in action['settings'].items():
-            action_data_group.attrs.create(name, value)
-        self.datafile.flush()
         # show what is running
         self.active_row = step['row']
         self.active_row.set_active(True)
         self.scrollArea.ensureWidgetVisible(self.active_row, 0, 40)
-        step['group'].repeat_progress_label.setText('repeat {} of {}'.format(step['repeat_index'] + 1, step['N_repeats']))
+        step['group'].repeat_progress_label.setText('{} of {}'.format(step['repeat_index'] + 1, step['N_repeats']))
+        self.update_repeat_column_width()
         description = 'group {}, repeat {} of {}, action {}: {}'.format(step['group_index'] + 1, step['repeat_index'] + 1,
                                                                        step['N_repeats'], step['action_index'] + 1, action_name)
         self.status_label.setText('running {}'.format(description))
         self.log('started {}'.format(description))
-        # start measurement
         self.active_experiment = experiment
         try:
-            if 'path' in inspect.signature(experiment.start_measurement).parameters:
-                experiment.start_measurement(datafile=self.datafile, path=action_data_group.name)
+            action_data_group = self.create_action_data_group(step, action)
+            if is_measurement_action(experiment):
+                # copy settings of the table row to the experiment window
+                for setting in self.experiment_settings[action_name]:
+                    setting.set_value(action['settings'][setting.name])
+                self.save_recorded_settings(action_data_group)
+                if 'path' in inspect.signature(experiment.start_measurement).parameters:
+                    experiment.start_measurement(datafile=self.datafile, path=action_data_group.name)
+                else:
+                    # experiment cannot be told where to save, it saves where it does when started from its own window
+                    experiment.start_measurement()
             else:
-                # experiment cannot be told where to save, it saves where it does when started from its own window
-                experiment.start_measurement()
+                self.apply_settings_action(action_name, action['settings'])
         except Exception:
             self.measurement_error = traceback.format_exc()
+        # check_measurement() continues with the next action when this one has finished
         self.measurement_timer.start()
+
+    def create_action_data_group(self, step, action):
+        """
+        Create the hdf5 group of an action, where a measurement saves its data, with the settings of the
+        action as attributes.
+
+        step : dict
+            step of the plan, see start_plan()
+        action : dict
+            as returned by action_row.get_action()
+
+        Returns
+        action_data_group : h5py group
+        """
+        repeat_group_name = 'group_{}_repeat_{:0{}d}'.format(step['group_index'] + 1, step['repeat_index'],
+                                                            max(3, len(str(step['N_repeats'] - 1))))
+        repeat_group = self.plan_group.require_group(repeat_group_name)
+        action_group_name = 'action_{}_{}'.format(step['action_index'] + 1, action['action'].replace(' ', '_'))
+        action_data_group = repeat_group.create_group(action_group_name)
+        action_data_group.attrs.create('timestamp', self.datafile.timestamp())
+        action_data_group.attrs.create('action', action['action'])
+        for name, value in action['settings'].items():
+            action_data_group.attrs.create(name, value)
+        self.datafile.flush()
+        return action_data_group
+
+    def save_recorded_settings(self, action_data_group):
+        """
+        Save the current settings of the windows marked record_in_measurements in settings_hints, e.g. the
+        multiplexer channels, as attributes <record_in_measurements>_<setting name> of the group of a measurement.
+        """
+        for name, experiment in self.experiments.items():
+            prefix = settings_hints.get(type(experiment).__name__, {}).get('record_in_measurements')
+            if prefix is not None:
+                for setting in self.experiment_settings[name]:
+                    action_data_group.attrs.create('{}_{}'.format(prefix, setting.name), setting.get_value())
+        self.datafile.flush()
+
+    def apply_settings_action(self, action_name, settings):
+        """
+        Copy the settings of a settings action to its window. The window sends them to the instrument, as
+        when a user changes its widgets. Errors raised while doing so stop the plan.
+
+        action_name : str
+        settings : dict
+            {setting name: value}
+        """
+        # errors raised in the slots of the window do not reach this code: PyQt passes them to sys.excepthook,
+        # and aborts the program if that is Python's default one. Collect them instead, and stop at the first.
+        slot_errors = []
+        previous_excepthook = sys.excepthook
+        sys.excepthook = lambda error_type, error, error_traceback: slot_errors.append(
+            ''.join(traceback.format_exception(error_type, error, error_traceback)))
+        try:
+            for setting in self.experiment_settings[action_name]:
+                setting.set_value(settings[setting.name])
+                if len(slot_errors) > 0:
+                    break
+        finally:
+            sys.excepthook = previous_excepthook
+        if len(slot_errors) > 0:
+            raise RuntimeError('error in the {} window while setting {}:\n{}'.format(
+                action_name, setting.name, '\n'.join(slot_errors)))
 
     def check_measurement(self):
         """ called regularly by measurement_timer while a measurement is running """
         experiment = self.active_experiment
         measurement_thread = getattr(experiment, 'measurement_thread', None)
-        if self.measurement_error is None:
+        if self.measurement_error is None and is_measurement_action(experiment):
             if measurement_thread is not None and measurement_thread.is_alive():
                 return
             if measurement_thread is None and experiment.measurement_is_running:
                 return
-        # measurement has finished
+        # action has finished. Settings actions finish as soon as their settings are sent
         self.measurement_timer.stop()
         self.active_row.set_active(False)
-        if self.measurement_error is not None or experiment.measurement_is_running:
-            # the measurement thread ended with an error, do not continue as the state of the instruments is not known
-            experiment.measurement_is_running = False
+        if self.measurement_error is not None or getattr(experiment, 'measurement_is_running', False):
+            # the action ended with an error, do not continue as the state of the instruments is not known.
+            # measurement_is_running is left as the experiment set it: each experiment resets it when it has
+            # turned off its outputs, so if it is still True the experiment did not end correctly
             if self.measurement_error is None:
                 self.measurement_error = 'the measurement ended without resetting measurement_is_running'
             self.log('ERROR in the measurement:\n{}'.format(self.measurement_error))
@@ -959,7 +1183,7 @@ class experiment_planner(QtWidgets.QWidget):
 
     def skip_action(self):
         """ stop the measurement that is running, the plan continues with the next action """
-        if self.plan_is_running and self.active_experiment is not None:
+        if self.plan_is_running and is_measurement_action(self.active_experiment):
             self.log('skipping action')
             self.status_label.setText('skipping action, waiting for the measurement to stop')
             self.active_experiment.stop_measurement()
@@ -969,18 +1193,68 @@ class experiment_planner(QtWidgets.QWidget):
         if self.plan_is_running and self.active_experiment is not None:
             self.stop_requested = True
             self.status_label.setText('stopping plan, waiting for the measurement to stop')
-            self.active_experiment.stop_measurement()
+            if is_measurement_action(self.active_experiment):
+                self.active_experiment.stop_measurement()
 
     def set_plan_controls(self):
-        """ the plan cannot be edited, and measurements cannot be started from their own windows, while a plan is running """
-        self.start_pushbutton.setEnabled(not self.plan_is_running)
+        """
+        The plan cannot be edited, and measurements cannot be started from their own windows, while a plan
+        is running. After shut down only the plan can be saved.
+        """
+        can_edit = not self.plan_is_running and not self.is_shut_down
+        self.start_pushbutton.setEnabled(can_edit)
         self.skip_pushbutton.setEnabled(self.plan_is_running)
         self.stop_pushbutton.setEnabled(self.plan_is_running)
-        self.load_plan_pushbutton.setEnabled(not self.plan_is_running)
-        self.table_widget.setEnabled(not self.plan_is_running)
+        self.load_plan_pushbutton.setEnabled(can_edit)
+        self.shutdown_pushbutton.setEnabled(can_edit)
+        self.table_widget.setEnabled(can_edit)
         for experiment in self.experiments.values():
             if hasattr(experiment, 'start_pushbutton'):
-                experiment.start_pushbutton.setEnabled(not self.plan_is_running)
+                experiment.start_pushbutton.setEnabled(can_edit)
+
+    def running_measurements(self):
+        """ names of the measurement actions whose measurement is running, also if started from their own window """
+        running = []
+        for name, experiment in self.experiments.items():
+            measurement_thread = getattr(experiment, 'measurement_thread', None)
+            if getattr(experiment, 'measurement_is_running', False) or (
+                    measurement_thread is not None and measurement_thread.is_alive()):
+                running.append(name)
+        return running
+
+    def shutdown(self):
+        """
+        Close the datafile and the connections to the instruments, at the end of the experiments.
+        Not possible while a plan or a measurement is running, as its outputs could then not be turned off.
+        Afterwards the windows of all actions are disabled, as their instruments can no longer be used.
+        """
+        if self.is_shut_down:
+            return
+        if self.plan_is_running:
+            self.log('cannot shut down while a plan is running, stop the plan first')
+            return
+        running = self.running_measurements()
+        if len(running) > 0:
+            self.log('cannot shut down while a measurement is running: {}'.format(', '.join(running)))
+            return
+        reply = QtWidgets.QMessageBox.question(self, 'experiment planner',
+                                               'Close the datafile and the connections to the instruments?\n'
+                                               'Measurements cannot be started again until the program is restarted.')
+        if reply != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        self.is_shut_down = True
+        items_to_close = [('datafile {}'.format(self.datafile.filename), self.datafile)]
+        items_to_close += [(type(instrument).__name__, instrument) for instrument in self.instruments]
+        for name, item in items_to_close:
+            try:
+                item.close()
+                self.log('closed {}'.format(name))
+            except Exception as exception:
+                self.log('could not close {}: {}'.format(name, exception))
+        for experiment in self.experiments.values():
+            experiment.setEnabled(False)
+        self.status_label.setText('shut down: datafile and instruments closed')
+        self.set_plan_controls()
 
     def log(self, message):
         self.log_plainTextEdit.appendPlainText('{}  {}'.format(self.datafile.timestamp(), message))
@@ -999,6 +1273,7 @@ class experiment_planner(QtWidgets.QWidget):
 if __name__ == '__main__' :
 
     from nanomol.instruments.keithley_2600A import keithley_2600A, keithley_2600A_ui
+    from nanomol.instruments.arduino_multiplexer_3_to_12_12_1 import arduino_multiplexer_3_to_12_12_1, arduino_multiplexer_3_to_12_12_1_ui
     from nanomol.utils.hdf5_datafile import hdf5_datafile
     from nanomol.utils.hdf5_viewer import hdf5_viewer
     from nanomol.experiments.transistor_transfer import transistor_transfer
@@ -1007,19 +1282,21 @@ if __name__ == '__main__' :
 
     datafile = hdf5_datafile(mode='x')
     smu = keithley_2600A('USB0::0x05E6::0x2612::4651966::INSTR')
+    multiplexer = arduino_multiplexer_3_to_12_12_1('COM10')
 
     experiment_app = QtWidgets.QApplication([])
 
-    # actions available in the planner
+    # actions available in the planner: measurements, and settings of the smu and of the multiplexer
     experiments = {'transfer': transistor_transfer(smu, datafile=datafile),
                    'output': transistor_output(smu, datafile=datafile),
-                   'current vs time': current_vs_time(datafile, smu) }
+                   'current vs time': current_vs_time(datafile, smu),
+                   'keithley settings': keithley_2600A_ui(smu),
+                   'multiplexer set active pins': arduino_multiplexer_3_to_12_12_1_ui(multiplexer) }
 
-    planner = experiment_planner(datafile, experiments)
-    smu_ui = keithley_2600A_ui(smu)
+    # instruments are closed by the shut down button of the planner
+    planner = experiment_planner(datafile, experiments, instruments=[smu, multiplexer])
     datafile_viewer = hdf5_viewer(datafile)
 
-    smu_ui.show()
     datafile_viewer.show()
     for experiment in experiments.values():
         experiment.show()

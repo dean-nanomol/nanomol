@@ -433,10 +433,13 @@ class keithley_2600A_ui(QtWidgets.QWidget):
         Check which widget emitted the signal and update the corresponding keithley setting.
         If calling method directly pass calling_widget.
         """
-        sender = self.sender()
-        if sender is None:
-            # function called without user interaction, e.g. through update_all_settings
+        if isinstance(calling_widget, QtWidgets.QWidget):
+            # called directly, e.g. by update_all_settings. self.sender() cannot be used then: PyQt returns the
+            # sender of the signal that started the code running now, e.g. a timer of the experiment planner
             sender = calling_widget
+        else:
+            # called by a widget signal. calling_widget then holds the new value sent by the signal
+            sender = self.sender()
         if sender == self.V_source_range_a_comboBox:
             self.keithley.set_source_range('a', 'v', sender.currentText() )
         elif sender == self.V_source_limit_a_doubleSpinBox:
