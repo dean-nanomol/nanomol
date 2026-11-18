@@ -714,6 +714,35 @@ class action_group(QtWidgets.QFrame):
         return {'repeat': self.repeat_spinBox.value(), 'actions': [row.get_action() for row in self.rows()]}
 
 
+class empty_sample_description_dialog(QtWidgets.QDialog):
+    """
+    Shown when a plan is started with an empty sample description. "continue" is enabled only after
+    checking "continue without sample description", and accepts the dialog. "cancel", or closing the
+    window, rejects it.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('experiment planner')
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel('The sample description text field is empty.'))
+        self.continue_checkBox = QtWidgets.QCheckBox('continue without sample description')
+        layout.addWidget(self.continue_checkBox)
+        buttons_layout = QtWidgets.QHBoxLayout()
+        buttons_layout.addStretch()
+        self.continue_pushbutton = QtWidgets.QPushButton('continue')
+        self.continue_pushbutton.setEnabled(False)
+        self.cancel_pushbutton = QtWidgets.QPushButton('cancel')
+        # Enter key cancels, so that a plan is never started by accident
+        self.cancel_pushbutton.setDefault(True)
+        buttons_layout.addWidget(self.continue_pushbutton)
+        buttons_layout.addWidget(self.cancel_pushbutton)
+        layout.addLayout(buttons_layout)
+        self.continue_checkBox.toggled.connect(self.continue_pushbutton.setEnabled)
+        self.continue_pushbutton.clicked.connect(self.accept)
+        self.cancel_pushbutton.clicked.connect(self.reject)
+
+
 class experiment_planner(QtWidgets.QWidget):
     """
     User interface to plan a sequence of measurements and run them automatically one after the other.
@@ -762,6 +791,12 @@ class experiment_planner(QtWidgets.QWidget):
             QFrame#table_cell QLabel, QFrame#table_header QLabel, QFrame#table_cell QCheckBox { color: #202020; }
             """)
         layout = QtWidgets.QVBoxLayout(self)
+        # description of the sample, saved as attribute of the plan group in the datafile
+        sample_layout = QtWidgets.QHBoxLayout()
+        sample_layout.addWidget(QtWidgets.QLabel('sample description'))
+        self.sample_description_lineEdit = QtWidgets.QLineEdit()
+        sample_layout.addWidget(self.sample_description_lineEdit)
+        layout.addLayout(sample_layout)
         # buttons to run the plan
         controls_layout = QtWidgets.QHBoxLayout()
         self.start_pushbutton = QtWidgets.QPushButton('start plan')
@@ -1089,10 +1124,17 @@ class experiment_planner(QtWidgets.QWidget):
         if not self.datafile:
             self.log('cannot start plan: the datafile is closed')
             return
+        sample_description = self.sample_description_lineEdit.text()
+        if sample_description.strip() == '':
+            # nothing has been written to the datafile yet: if cancelled, the plan simply does not start
+            dialog = empty_sample_description_dialog(self)
+            if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+                return
         # each run of a plan is saved in its own group of the datafile, together with the plan itself
         plan_group_name = self.datafile.get_unique_group_name(self.datafile, basename='plan')
         self.plan_group = self.datafile.create_group(plan_group_name)
         self.plan_group.attrs.create('timestamp', self.datafile.timestamp())
+        self.plan_group.attrs.create('sample_description', sample_description)
         self.plan_group.attrs.create('plan', json.dumps(self.get_plan(), ensure_ascii=False))
         self.datafile.flush()
         if self.autosave_plan_checkBox.isChecked():
@@ -1339,6 +1381,7 @@ class experiment_planner(QtWidgets.QWidget):
         self.load_plan_pushbutton.setEnabled(can_edit)
         self.shutdown_pushbutton.setEnabled(can_edit)
         self.table_widget.setEnabled(can_edit)
+        self.sample_description_lineEdit.setEnabled(can_edit)
         for experiment in self.experiments.values():
             if hasattr(experiment, 'start_pushbutton'):
                 experiment.start_pushbutton.setEnabled(can_edit)
